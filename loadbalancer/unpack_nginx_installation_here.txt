@@ -1,0 +1,6 @@
+Windows versions can be found here:
+http://nginx.org/en/download.html
+
+Linux versions can be found here (or in the package manager of your distribution):
+https://www.nginx.com/
+
