@@ -1,6 +1,10 @@
 
 Powershell "Multithreaded" Webserver.
 
+(Note : Improved version of https://gist.github.com/19WAS85/5424431)
+
+
+
 How it works:
 pwsh_webserver_bootstrap.ps1       : is used to start, stop, restart, ... all running instances.
                                      instances start at port 8080 and ramp up by how much is provided.
