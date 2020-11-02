@@ -34,7 +34,7 @@ If (-Not (Test-Path "$($global:WebPluginsPath)\$($NewPluginName)")) {
         Guid = $guid
         Author = $($env:USERNAME)
         Description = 'Webserver Plugin'
-        #RequiredModules = @("KWS.Global")
+        #RequiredModules = @("Web.Global")
     }
     New-ModuleManifest @params
 
