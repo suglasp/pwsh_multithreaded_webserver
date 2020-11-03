@@ -1,0 +1,78 @@
+
+#user  nobody;
+worker_processes  1;
+
+error_log  logs/error.log  info;
+
+events {
+    worker_connections  1024;
+}
+
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+
+    sendfile on;
+
+    keepalive_timeout  65;
+
+    server_tokens off;
+	
+    upstream pwsh_web {
+        ip_hash;
+        #least_conn;
+
+        server 127.0.0.1:8080;
+        server 127.0.0.1:8081;
+		
+        keepalive 8;
+    }
+	
+    server {
+        listen       80;
+        server_name  localhost;
+		
+        charset utf-8;
+
+        access_log  logs/access.log;
+
+		# redirect port 80 (http) to 443 (https)
+        location / {
+            return 302 https://localhost;
+        }
+    }
+
+    server {
+        listen       443 ssl;
+        server_name  localhost;
+
+        charset utf-8;
+
+        access_log  logs/access.log;
+		
+        location / {
+            proxy_pass http://pwsh_web;
+            
+			# proxy settings
+			proxy_set_header Host $host;
+			proxy_set_header    X-Real-IP       $remote_addr;
+			proxy_set_header    X-Forwared-For  $proxy_add_x_forwarded_for;
+            proxy_http_version 1.0;
+            #proxy_ignore_client_abort on;
+			
+			# compression offloading
+			proxy_set_header    Accept-Encoding "";
+        }
+		
+        ssl_certificate      "cert.pem";
+        ssl_certificate_key  "cert.key";
+		
+        ssl_session_cache    shared:SSL:1m;
+        ssl_session_timeout  1m;
+        ssl_ciphers 'ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA';
+        ssl_prefer_server_ciphers on;
+        #ssl_protocols TLSv1 TLSv1.1 TLSv1.2 TLSv1.3;
+		ssl_protocols TLSv1.2 TLSv1.3;
+    }
+	
+}
