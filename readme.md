@@ -31,8 +31,9 @@ the webserver at the same time.
 3) Edit file pwsh_webserver_bootstrap.ps1:
    edit line $global:WebCount, to set the number of instances you want.
    edit line $global:WebStartPort, to define the start port of the first instance.
+   edit line $global:LoadbalancerUseSSL. If $true (= https), if $false (= http).
 4) Edit file pwsh_webserver_instance.ps1:
-   edit line $global:PublishLocalhost. If $true (= localhost only), if $false (= public)
+   edit line $global:PublishLocalhost. If $true (= localhost only), if $false (= public).
 
 Starting webserver instances from Powershell (*):
 > .\pwsh_webserver_bootstrap.ps1 -start
@@ -45,5 +46,12 @@ Restarting webserver instances from Powershell (*):
 
 (*) *Running a webserver on ports below 1024 (wel known ports), you must run Powershell (or pwsh) in Elevated mode (Windows) or Root (Linux) to listen on for example port tcp/80 and tcp/443.
 Otherwise, you can just run it normally if it's for testing and running on port tcp/8080 or any of tcp/[1025-65535].*
+
+**Examples included**
+- http://localhost:8080/kill   :  route to shutdown the webserver
+- http://localhost:8080/ping   :  route to ping the webserver (used with .\pwsh_webserver_bootstrap.ps1 -verify)
+- http://localhost:8080/cookie :  simple example with cookies
+- http://localhost:8080/       :  example index page, no markup
+- http://localhost:8080/someapp/someapp.html : example app to test image and css loading
 
 Pieter De Ridder (Suglasp)

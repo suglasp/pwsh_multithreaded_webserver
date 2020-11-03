@@ -4,7 +4,7 @@
 # Powershell webserver single instance
 #
 # created : 01/11/2020
-# changed : 02/11/2020
+# changed : 03/11/2020
 #
 # Only tested on Windows 10 and Server 2019 with Poweshell 5.1 and Powershell 7.0.3.
 # This script is written with cross platform in mind.
@@ -92,7 +92,7 @@ Function DynamicLoad-WebPlugins {
             } Else {
                 Write-Host "[i] Plugin already present : $($plugin.Name)"
             }
-        }    
+        }
     }
 
     Write-Host ""
@@ -112,7 +112,7 @@ Function DynamicUnload-WebPlugins {
         If ($plugin.ModuleBase.Contains($global:WebPluginsPath)) {
             Write-Host "[!] Unloading plugin : $($plugin.Name)"
             Remove-Module $($plugin.Name)
-        }    
+        }
     }
 
     Write-Host ""
@@ -174,7 +174,8 @@ Function Main {
 
     # publish webserver URL prefix (default, publish to localhost)
     If ($global:PublishLocalhost) {
-        $global:ServerURL = "http://localhost:$($global:Port)/"
+        #$global:ServerURL = "http://localhost:$($global:Port)/"
+        $global:ServerURL = "http://127.0.0.1:$($global:Port)/"
     } Else {
         # Often global publish, Requires Elevation on Windows or Root on Linux in the TCP/IP stack
         $global:ServerURL = "http://*:$($global:Port)/"
@@ -274,6 +275,68 @@ Function Main {
                 $context.Response.OutputStream.Close()                
             }
                         
+
+            # webserver cookie
+            # http://127.0.0.1/cookie'
+            If ($context.Request.HttpMethod -eq 'GET' -and $context.Request.RawUrl -eq '/cookie') {
+                Write-Host "[!] Webserver cookie"
+                [string]$cookieResponse = "<html><head><title>cookie</title><body>Cookies!</body></html>"
+
+                # ---- read cookie(s)
+                [System.Net.CookieCollection]$cookies = $context.Request.Cookies
+
+                $cookieFound = $false
+
+                If ($cookies) {
+                    ForEach($getCookie in $cookies) {
+                        #Write-Host $getCookie.Name
+                        If ($getCookie.Name -eq "ID") {
+                            #[System.Net.Cookie]$getCookie = $cookies["ID"]
+                            Write-Host "Found cookie : $($getCookie.Name)=$($getCookie.Value)"
+
+                            $cookieFound = $true
+                        }
+                    }                    
+                }
+
+                $context.Request.Cookies
+
+                # ---- read cookie(s)
+
+                #resposed to the request
+                $buffer = [System.Text.Encoding]::UTF8.GetBytes($cookieResponse)
+                $context.Response.Headers.Add("Content-Type","text/html")
+                $context.Response.StatusCode = [int32][System.Net.HttpStatusCode]::OK
+                $context.Response.StatusDescription = "COOKIES OK"                
+
+                # ---- write a cookie
+                [System.Net.Cookie]$setCookie = [System.Net.Cookie]::new()
+
+                If ($cookieFound) {
+                    # clear cookie
+                    $setCookie.Name = "ID"
+                    $setCookie.Value = ""
+                } else {
+                    # set cookie
+                    $setCookie.Name = "ID"
+                    $setCookie.Value = "$([Environment]::GetEnvironmentVariable("USERNAME"))"
+                    $setCookie.Expires = (Get-Date).AddDays(1)
+                    $setCookie.Secure = $true
+                #$setCookie.GetHashCode()
+                }
+
+                #$context.Response.Cookies.Add($setCookie)
+                $context.Response.SetCookie($setCookie)
+                #$context.Response.AddHeader("Set-Cookie", "$($setCookie.Name)=$($setCookie.Value)");
+                #$context.Response.AppendHeader("Set-Cookie", "name2=value2");
+
+                $context.Response.Cookies
+                # ---- write a cookie
+
+                $context.Response.ContentLength64 = $buffer.Length
+                $context.Response.OutputStream.Write($buffer, 0, $buffer.Length)
+                $context.Response.OutputStream.Close()                
+            }
 
             # Request root and other files
             # http://127.0.0.1/<filename>.<ext>

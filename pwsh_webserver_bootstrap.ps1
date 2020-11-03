@@ -4,7 +4,7 @@
 # Bootstrap script for webserver instances (Powershell) and Loadbalancer (Nginx)
 #
 # created : 01/11/2020
-# changed : 02/11/2020
+# changed : 03/11/2020
 #
 # Only tested on Windows 10 and Server 2019 with Poweshell 5.1 and Powershell 7.0.3.
 # Currently will not run on Linux, unless you change $global:PowershellExe and $global:NginxExe.
@@ -20,6 +20,8 @@
 # -access : dump last 20 lines of nginx access.log
 # -config : dump nginx nginx.conf
 #
+# The purpose is the nginx (loadbalancer) is accessible from outside, and eventually does loadbalancing and SSL termination.
+# The Powershell web instances are hosted on localhost, so only Nginx can "talk" in the backend to the Powershell web instances.
 #
 
 
@@ -38,6 +40,7 @@ $ProgressPreference = "SilentlyContinue"
 [int32]$global:WebCount = 2
 [int32]$global:LoadbalancerStartPort = 80
 [int32]$global:LoadbalancerStartPortSSL = 443
+[bool]$global:LoadbalancerUseSSL = $false
 [string]$global:PowershellExe = "powershell.exe"
 [string]$global:NginxExe = "nginx.exe"
 
@@ -153,15 +156,25 @@ Function Reload-Loadbalancer {
 #
 Function Verify-Loadbalancer {
     Write-Host " Verify Loadbalancer port test ... " -NoNewline
-    If ($(Invoke-WebRequest -Uri "http://localhost:$($global:LoadbalancerStartPort)" -TimeoutSec 5).StatusCode -eq 200) {
+
+    # default http
+    [string]$loadbalancerProtocol = "http"
+
+    # make it https
+    If ($global:LoadbalancerUseSSL) {
+        $loadbalancerProtocol += "s"
+    }
+
+    If ($(Invoke-WebRequest -Uri "$($loadbalancerProtocol)://127.0.0.1:$($global:LoadbalancerStartPort)" -TimeoutSec 5).StatusCode -eq 200) {
        Write-Host "OK"
     } else {
         Write-Host "Not OK"
     }
 
+    # backend is always http
     For([int32]$port = $global:WebStartPort; $port -lt ($global:WebStartPort + $global:WebCount); $port++) {
         Write-Host " Verify Instance port test : $($port.ToString()) ... " -NoNewline
-        If ($(Invoke-WebRequest -Uri "http://localhost:$($port.ToString())/ping" -TimeoutSec 5).StatusCode -eq 200) {
+        If ($(Invoke-WebRequest -Uri "http://127.0.0.1:$($port.ToString())/ping" -TimeoutSec 5).StatusCode -eq 200) {
             Write-Host "OK"
         } else {
             Write-Host "Not OK"
