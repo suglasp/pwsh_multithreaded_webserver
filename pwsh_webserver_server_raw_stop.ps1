@@ -5,7 +5,7 @@
 # In Powershell ISE, run this in a seperated Tab (or powershell session for that matter) to kill the running web instance.
 #
 # created : 02/11/2020
-# changed : 02/11/2020
+# changed : 03/11/2020
 #
 
 
@@ -14,7 +14,7 @@
 try {
     Invoke-WebRequest -Uri "http://localhost:$($port.ToString())/kill" -TimeoutSec 5
 } catch {
-    Write-Warning "[!] failed?!"
+    Write-Host "OK"
 }
 
 Remove-NetFirewallRule -DisplayName "webserver_$($global:Port)" -ErrorAction SilentlyContinue
