@@ -48,10 +48,10 @@ Restarting webserver instances from Powershell (*):
 Otherwise, you can just run it normally if it's for testing and running on port tcp/8080 or any of tcp/[1025-65535].*
 
 **Examples included**
-- http://localhost:8080/kill   :  route to shutdown the webserver
-- http://localhost:8080/ping   :  route to ping the webserver (used with .\pwsh_webserver_bootstrap.ps1 -verify)
-- http://localhost:8080/cookie :  simple example with cookies
-- http://localhost:8080/       :  example index page, no markup
-- http://localhost:8080/someapp/someapp.html : example app to test image and css loading
+- http://localhost:<instance_port>/kill   :  route to shutdown the webserver
+- http://localhost:<instance_port>/ping   :  route to ping the webserver (used with .\pwsh_webserver_bootstrap.ps1 -verify)
+- http://localhost/cookie :  simple example with cookies
+- http://localhost/       :  example index page, no markup
+- http://localhost/someapp/someapp.html : example app to test image and css loading
 
 Pieter De Ridder (Suglasp)
