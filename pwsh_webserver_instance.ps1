@@ -23,14 +23,21 @@
 
 
 #
+# Function : Stop-Webserver
+#
+Function Stop-Webserver {
+    # shutdown http server
+    If ($($global:Http).IsListening) {
+        $($global:Http).Stop()
+        $global:Http = $null
+    }
+}
+
+#
 # Function : Exit-Gracefully
 #
 Function Exit-Gracefully {
-    # shutdown http
-    If ($($global:Http).IsListening) {
-        $($global:Http).Stop()
-        #$global:Http = $null
-    }
+    Stop-Webserver
 
     # unload plugins
     DynamicUnload-WebPlugins
@@ -47,11 +54,8 @@ Function Exit-Gracefully {
 # Function : Exit-Bailout
 #
 Function Exit-Bailout {
-    # shutdown http
-    If ($($global:Http).IsListening) {
-        $($global:Http).Stop()
-        #$global:Http = $null
-    }
+    # shutdown http server
+    Stop-Webserver
 
     # unload plugins
     DynamicUnload-WebPlugins
