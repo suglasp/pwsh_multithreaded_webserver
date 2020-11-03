@@ -37,6 +37,7 @@ Function Stop-Webserver {
 # Function : Exit-Gracefully
 #
 Function Exit-Gracefully {
+    # shutdown http server
     Stop-Webserver
 
     # unload plugins
