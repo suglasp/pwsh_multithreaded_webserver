@@ -19,6 +19,8 @@
 # -error  : dump last 20 lines of nginx error.log
 # -access : dump last 20 lines of nginx access.log
 # -config : dump nginx nginx.conf
+# -clean  : clean log files
+# -reset  : reset full stack
 #
 # The purpose is the nginx (loadbalancer) is accessible from outside, and eventually does loadbalancing and SSL termination.
 # The Powershell web instances are hosted on localhost, so only Nginx can "talk" in the backend to the Powershell web instances.
@@ -33,8 +35,9 @@ $ProgressPreference = "SilentlyContinue"
 [string]$global:LoadbalancerPath = "$($global:WorkFolder)\loadbalancer"
 [string]$global:LoadbalancerPIDFile = "$($global:LoadbalancerPath)\logs\nginx.pid"
 [string]$global:LoadbalancerCfgFile = "$($global:LoadbalancerPath)\conf\nginx.conf"
-[string]$global:LoadbalancerAccLog = "$($global:LoadbalancerPath)\logs\access.log"
-[string]$global:LoadbalancerErrLog = "$($global:LoadbalancerPath)\logs\error.log"
+[string]$global:LoadbalancerLogs = "$($global:LoadbalancerPath)\logs"
+[string]$global:LoadbalancerAccLog = "$($LoadbalancerLogs)\access.log"
+[string]$global:LoadbalancerErrLog = "$($LoadbalancerLogs)\error.log"
 [string]$global:WebLogsPath = "$($global:WorkFolder)\logs"
 [int32]$global:WebStartPort = 8080
 [int32]$global:WebCount = 2
@@ -75,7 +78,7 @@ Function Start-Loadbalancer {
 
         # start loadbalancer process(es)
         Start-Process -FilePath "$($global:LoadbalancerPath)\$($global:NginxExe)" -WorkingDirectory "$($global:LoadbalancerPath)" -WindowStyle Minimized
-    } else {
+    } Else {
         Write-Warning "already running"
     }
 
@@ -110,14 +113,12 @@ Function Stop-Loadbalancer {
         }
 
         # remove .pid file
-        If (Test-Path -Path $global:LoadbalancerPIDFile) {
-            Remove-Item -Path $global:LoadbalancerPIDFile -ErrorAction SilentlyContinue
-        }
+        Clean-LoadbalancerPID
 
         # remove loadbalancer Windows firewall rule
         Remove-NetFirewallRule -DisplayName "webserver_loadbalancer_http" -ErrorAction SilentlyContinue
         Remove-NetFirewallRule -DisplayName "webserver_loadbalancer_https" -ErrorAction SilentlyContinue
-    } else {
+    } Else {
         Write-Warning "no instances running"
     }
 
@@ -133,7 +134,7 @@ Function Stop-Loadbalancer {
             Invoke-WebRequest -Uri "http://localhost:$($port.ToString())/kill" -TimeoutSec 5
             Start-Sleep -Seconds (1 * $global:WebCount)
         }
-    } else {
+    } Else {
         Write-Warning "already stopped"
     }
 }
@@ -178,7 +179,7 @@ Function Verify-Loadbalancer {
         Write-Host " Verify Instance port test : $($port.ToString()) ... " -NoNewline
         If ($(Invoke-WebRequest -Uri "http://127.0.0.1:$($port.ToString())/ping" -TimeoutSec 5).StatusCode -eq 200) {
             Write-Host "OK"
-        } else {
+        } Else {
             Write-Host "Not OK"
         }
     }
@@ -197,7 +198,7 @@ Function Dump-Logfile {
         Write-Host ""
         Write-Host "-- last $($linecount.ToString()) lines of $(Split-Path -Path $logfile -Leaf)"
         Get-Content -Path $logfile | Select -First $linecount
-    } else {
+    } Else {
         Write-Warning "File $($logfile) not found."
     }
 }
@@ -214,10 +215,70 @@ Function Dump-Cfgfile {
         Write-Host ""
         Write-Host "-- config file $(Split-Path -Path $cfgfile -Leaf)"
         Get-Content -Path $cfgfile
-    } else {
+    } Else {
         Write-Warning "File $($cfgfile) not found."
     }
 }
+
+
+#
+# Function : Clean-LoadbalancerPID
+#
+Function Clean-LoadbalancerPID {
+    # remove .pid file
+    If (Test-Path -Path $global:LoadbalancerPIDFile) {
+        try {
+            Remove-Item -Path $global:LoadbalancerPIDFile -Force -ErrorAction SilentlyContinue
+        } catch {
+            Write-Host "Failed to remove pid file (file locked - still in use?)"
+        }
+    }
+}
+
+#
+# Function : Clean-LogPath
+#
+Function Clean-LogPath {
+    Param (
+        [string]$logPath,
+        [string]$filter = "*.log"
+    )
+
+    If (Test-Path -Path $logPath) {
+        # get a list of csv files in current work folder
+        $logFiles = @(Get-ChildItem -File -Path "$($logPath)" -Filter "$($filter)")
+
+        # process each log file
+        If ($logFiles.Length -gt 0) {
+            ForEach($logFile in $logFiles) {
+                Write-Host "Cleaning $($logFile.Name)... " -NoNewline
+
+                try {
+                    Remove-Item -Path "$($logFile.FullName)" -Force -ErrorAction SilentlyContinue
+                    Write-Host "OK"
+                } catch {
+                    Write-Host "Failed (file locked - still in use?)"
+                }
+            }
+        } Else {
+            Write-Host "No log files present in $($logPath). :)"
+        }
+    } Else {
+        Write-Warning "Path $($logPath) not found."
+    }
+}
+
+#
+# Function : Clean-AllLogs
+#
+Function Clean-AllLogs {
+    # clean loadbalancer log files
+    Clean-LogPath -logPath $global:LoadbalancerLogs
+
+    # clean webinstances log files
+    Clean-LogPath -logPath $global:WebLogsPath -filter "PowerShell_transcript*.txt"
+}
+
 
 #
 # Function Main
@@ -266,10 +327,25 @@ Function Main {
                     Write-Host ">> Config file" 
                     Dump-Cfgfile -cfgfile $global:LoadbalancerCfgFile
                 }
+
+                "-clean" {
+                    Write-Host ">> Clean log files" 
+                    Clean-AllLogs
+                }
+
+                "-reset" {
+                    Write-Host ">> Reset webserver" 
+                    Stop-Loadbalancer
+                    Start-Sleep -Seconds 2
+                    Clean-LoadbalancerPID
+                    Clean-AllLogs
+                    Write-Host "-- done"
+                }
+
             }
         }
     } else {
-        Write-Host "Usage : -start, -stop, -reload, -verify, -access or -error"
+        Write-Host "Usage : -start, -stop, -reload, -verify, -access, -error, -clean or -reset"
     }
 
     Exit(0)
