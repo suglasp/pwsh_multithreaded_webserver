@@ -1,8 +1,16 @@
 
-Powershell "Multithreaded" Webserver.
+Powershell "Multithreaded" Utility Webserver.
 
 (Note : Improved version of https://gist.github.com/19WAS85/5424431)
 
+
+Why?
+I needed a webserver to host a tools/utility webpage as a sysadmin.
+The utility page needed to be flexible and be able to interact with low level components.
+Go lang or Rust would fit to, but takes more time to build and also in Powershell
+many of there low level components are present.
+In one day, i put this together and make it so, so that more then one user can interact with
+the webserver at the same time.
 
 
 How it works:
