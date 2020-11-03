@@ -2,7 +2,7 @@
 
 ( Note : Improved version of [github gist reference](https://gist.github.com/19WAS85/5424431) )
 
-**Why?**
+**Why?** 
 I needed a webserver to host a tools/utility webpage as a sysadmin.
 The utility page needed to be flexible and be able to interact with low level components.
 Go lang or Rust would fit to, but takes more time to build and also in Powershell
@@ -10,18 +10,18 @@ many of these low level components are present.
 In one day, I put this together and make it so, so that more then one user can interact with
 the webserver at the same time.
 
-**How it works**
-pwsh_webserver_bootstrap.ps1       : is used to start, stop, restart, ... all running instances.
+**How it works** 
+- pwsh_webserver_bootstrap.ps1       : is used to start, stop, restart, ... all running instances.
                                      instances start at port 8080 and ramp up by how much is provided.
-pwsh_webserver_instance.ps1        : core script, this is a single instance of a webserver.
-pwsh_webserver_server_raw_stop.ps1 : quick script to stop single instance (script used for development)
-pwsh_webserver_create_module.ps1   : quick script to create a plugin for the webserver
+- pwsh_webserver_instance.ps1        : core script, this is a single instance of a webserver.
+- pwsh_webserver_server_raw_stop.ps1 : quick script to stop single instance (script used for development)
+- pwsh_webserver_create_module.ps1   : quick script to create a plugin for the webserver
 
-**Sub-Folders**
-./content : all content goes here (html, htm, css, gif, jpg, png, ico, zip, ...)
-./loadbalancer : nginx binary (executable) and all subfolders need to be placed here
-./logs : log files of the webserver instances (pwsh_webserver_instance.ps1)
-./plugins : plugins go here (basically, they are Powershell modules)
+**Sub-Folders** 
+- ./content : all content goes here (html, htm, css, gif, jpg, png, ico, zip, ...)
+- ./loadbalancer : nginx binary (executable) and all subfolders need to be placed here
+- ./logs : log files of the webserver instances (pwsh_webserver_instance.ps1)
+- ./plugins : plugins go here (basically, they are Powershell modules)
 
 **Configuration**
 1) edit config file ./loadbalancer/config/nginx.conf:
