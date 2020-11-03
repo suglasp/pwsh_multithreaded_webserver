@@ -159,13 +159,15 @@ Function Verify-Loadbalancer {
 
     # default http
     [string]$loadbalancerProtocol = "http"
+    [uint32]$loadbalancerPort = $global:LoadbalancerStartPort
 
     # make it https
     If ($global:LoadbalancerUseSSL) {
         $loadbalancerProtocol += "s"
+        $loadbalancerPort = $global:LoadbalancerStartPortSSL
     }
 
-    If ($(Invoke-WebRequest -Uri "$($loadbalancerProtocol)://127.0.0.1:$($global:LoadbalancerStartPort)" -TimeoutSec 5).StatusCode -eq 200) {
+    If ($(Invoke-WebRequest -Uri "$($loadbalancerProtocol)://$([environment]::GetEnvironmentVariable("COMPUTERNAME")):$($loadbalancerPort)" -TimeoutSec 5).StatusCode -eq 200) {
        Write-Host "OK"
     } else {
         Write-Host "Not OK"
