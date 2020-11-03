@@ -46,6 +46,7 @@ $ProgressPreference = "SilentlyContinue"
 [bool]$global:LoadbalancerUseSSL = $false
 [string]$global:PowershellExe = "powershell.exe"
 [string]$global:NginxExe = "nginx.exe"
+[System.Diagnostics.ProcessWindowStyle]$global:WNDVisibility = [System.Diagnostics.ProcessWindowStyle]::Minimized
 
 
 #
@@ -64,7 +65,7 @@ Function Start-Loadbalancer {
     For([int32]$port = $global:WebStartPort; $port -lt ($global:WebStartPort + $global:WebCount); $port++) {
         Write-Host "  Instance : $($port.ToString())"
         # could also be done through runspaces. Keep it simple.
-        Start-Process -FilePath "$($global:PowershellExe)" -ArgumentList "-ExecutionPolicy ByPass -File $($global:WorkFolder)\pwsh_webserver_instance.ps1 -port $($port.ToString())" -WorkingDirectory "$($global:WorkFolder)" -WindowStyle Minimized
+        Start-Process -FilePath "$($global:PowershellExe)" -ArgumentList "-ExecutionPolicy ByPass -File $($global:WorkFolder)\pwsh_webserver_instance.ps1 -port $($port.ToString())" -WorkingDirectory "$($global:WorkFolder)" -WindowStyle $global:WNDVisibility
         
         Start-Sleep -Seconds (1 * $global:WebCount)
     }
@@ -77,7 +78,7 @@ Function Start-Loadbalancer {
         New-NetFirewallRule -DisplayName "webserver_loadbalancer_https" -Profile @('Domain', 'Private') -Direction Inbound -Action Allow -Protocol TCP -LocalPort @($global:LoadbalancerStartPortSSL) -ErrorAction SilentlyContinue
 
         # start loadbalancer process(es)
-        Start-Process -FilePath "$($global:LoadbalancerPath)\$($global:NginxExe)" -WorkingDirectory "$($global:LoadbalancerPath)" -WindowStyle Minimized
+        Start-Process -FilePath "$($global:LoadbalancerPath)\$($global:NginxExe)" -WorkingDirectory "$($global:LoadbalancerPath)" -WindowStyle $global:WNDVisibility
     } Else {
         Write-Warning "already running"
     }
@@ -131,7 +132,28 @@ Function Stop-Loadbalancer {
     If ($processesWebservers.Count -gt 0) {
         For([int32]$port = $global:WebStartPort; $port -lt ($global:WebStartPort + $global:WebCount); $port++) {
             Write-Host "  Instance : $($port.ToString()) ... " -NoNewline
-            Invoke-WebRequest -Uri "http://localhost:$($port.ToString())/kill" -TimeoutSec 5
+            
+            [Microsoft.PowerShell.Commands.WebResponseObject]$request = $null
+             
+            # try shutdown webinstance(s) through http://webserver:<port>/kill    
+            try {
+                $request = Invoke-WebRequest -Uri "http://127.0.0.1:$($port.ToString())/kill" -TimeoutSec 5
+            } catch {
+                # silence Invoke-WebRequest
+                # report code (Code 504 is in fact okay, because the web instance(s) sends 504 when shutdown through http://webserver:<port>/kill )
+                #If ($request) {
+                #    If ($request.StatusCode -eq [int32][System.Net.HttpStatusCode]::GatewayTimeout) {
+                #        Write-Host "OK"
+                #    } Else {
+                #        Write-Host "Failed"
+                #    }
+                #} Else {
+                #    Write-Host "Unknown"
+                #}
+
+                Write-Host "OK"
+            }
+            
             Start-Sleep -Seconds (1 * $global:WebCount)
         }
     } Else {
@@ -168,19 +190,26 @@ Function Verify-Loadbalancer {
         $loadbalancerPort = $global:LoadbalancerStartPortSSL
     }
 
-    If ($(Invoke-WebRequest -Uri "$($loadbalancerProtocol)://$([environment]::GetEnvironmentVariable("COMPUTERNAME")):$($loadbalancerPort)" -TimeoutSec 5).StatusCode -eq 200) {
-       Write-Host "OK"
-    } else {
+    # try loadbalancer check
+    try { 
+        If ($(Invoke-WebRequest -Uri "$($loadbalancerProtocol)://$([environment]::GetEnvironmentVariable("COMPUTERNAME")):$($loadbalancerPort)" -TimeoutSec 5).StatusCode -eq [int32][System.Net.HttpStatusCode]::OK) {
+            Write-Host "OK"
+        }
+    } catch {
         Write-Host "Not OK"
+        # silent
     }
 
-    # backend is always http
+    # backend check (is always http)
     For([int32]$port = $global:WebStartPort; $port -lt ($global:WebStartPort + $global:WebCount); $port++) {
         Write-Host " Verify Instance port test : $($port.ToString()) ... " -NoNewline
-        If ($(Invoke-WebRequest -Uri "http://127.0.0.1:$($port.ToString())/ping" -TimeoutSec 5).StatusCode -eq 200) {
-            Write-Host "OK"
-        } Else {
+        try { 
+            If ($(Invoke-WebRequest -Uri "http://127.0.0.1:$($port.ToString())/ping" -TimeoutSec 5).StatusCode -eq [int32][System.Net.HttpStatusCode]::OK) {
+                Write-Host "OK"
+            }
+        } catch {
             Write-Host "Not OK"
+            # silent
         }
     }
 }
