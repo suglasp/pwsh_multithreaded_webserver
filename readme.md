@@ -28,7 +28,7 @@ the webserver at the same time.
 
 **Configuration**
 1) edit config file ./loadbalancer/config/nginx.conf:
-   config the loadbalancer, for example add more web instances, enable ip hasing, enable ssl)
+   config the loadbalancer, for example add more web instances, enable ip hasing, enable ssl.
 2) subfolder ./content :
    place your website content here
 3) Edit file pwsh_webserver_bootstrap.ps1:
