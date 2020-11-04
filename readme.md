@@ -10,8 +10,12 @@ many of these low level components are present.
 In one day, I put this together and make it so, so that more then one user can interact with
 the webserver at the same time.
 
+The part _'multithreaded'_ in the github name, is in fact untrue.
+Because we use Nginx as a loadbalancer in 'front' of the Powershell web instances, it "looks" multithreaded.
+But the true naming is actually horizontal scalability.
 
 **How it works** 
+
 - pwsh_webserver_bootstrap.ps1       : is used to start, stop, restart, ... all running instances.
                                      instances start at port 8080 and ramp up by how much is provided.
 - pwsh_webserver_instance.ps1        : core script, this is a single instance of a webserver.

@@ -4,7 +4,7 @@
 # Powershell webserver single instance
 #
 # created : 01/11/2020
-# changed : 03/11/2020
+# changed : 04/11/2020
 #
 # Only tested on Windows 10 and Server 2019 with Poweshell 5.1 and Powershell 7.0.3.
 # This script is written with cross platform in mind.
@@ -15,11 +15,66 @@
 [string]$global:ContentFolder = "$($global:WorkFolder)\content"
 [string]$global:WebPluginsPath = "$($global:WorkFolder)\plugins"
 [string]$global:WebLogsPath = "$($global:WorkFolder)\logs"
-[uint32]$global:Port = 8080
-[uint32]$global:ExitCode = 0
+[UInt32]$global:Port = 8080
+[UInt32]$global:ExitCode = 0
 [System.Net.HttpListener]$global:Http = [System.Net.HttpListener]::new()
 [bool]$global:PublishLocalhost = $true
+[bool]$global:DebugExtraVerbose = $false
+[string]$global:IndexPage = "index.html"
 
+#
+# Function : Start-Webserver
+#
+Function Start-Webserver {
+    Param (
+        [System.Array]$ServerUrlPrefixes = @("localhost", "127.0.0.1"),
+        [UInt16]$ServerPort = 8080,
+        [System.Net.AuthenticationSchemes]$Authentication = [System.Net.AuthenticationSchemes]::Anonymous
+    )
+
+    # create http in memory if not exists
+    If (-not ($global:Http)) {
+        $global:Http = [System.Net.HttpListener]::new()
+    }
+
+    # pre-load plugins
+    DynamicLoad-WebPlugins
+
+    # try starting the  http server
+    If ($global:Http) {
+        # Hostname and ports to listen on
+        ForEach($ServerURLPrefix in $ServerUrlPrefixes) {
+            $global:Http.Prefixes.Add("http://$($ServerURLPrefix):$($ServerPort)/")
+        }
+
+        # set authentication
+        $global:Http.AuthenticationSchemes = $Authentication
+
+        try {
+            # try starting the http server
+            $global:Http.Start()
+
+            # Log ready message to terminal 
+            If ($global:Http.IsListening) {
+                Write-Host "[!] HTTP Server is hosting"
+                ForEach($ServerURLPrefix in $ServerUrlPrefixes) {
+                    Write-Host " -> Serving URL http://$($ServerURLPrefix):$($ServerPort)/"
+                }
+
+                # allow Windows firewall rule
+                New-NetFirewallRule -DisplayName "webserver_$($global:Port)" -Profile @('Domain', 'Private') -Direction Inbound -Action Allow -Protocol TCP -LocalPort @($global:Port) -ErrorAction SilentlyContinue
+            } Else {
+                Write-Host "[!] HTTP Server has soft failed"
+                $global:Http.Close()
+                $global:Http.Stop()
+                
+                Exit-Bailout
+            }
+        } catch [System.Net.HttpListenerException] {
+            Write-Host "[!] HTTP Server has hard failed"
+        }
+    }
+}
 
 
 #
@@ -27,10 +82,13 @@
 #
 Function Stop-Webserver {
     # shutdown http server
-    If ($($global:Http).IsListening) {
-        $($global:Http).Stop()
+    If ($global:Http.IsListening) {
+        $global:Http.Stop()
         $global:Http = $null
     }
+
+    # remove Windows firewall rule
+    Remove-NetFirewallRule -DisplayName "webserver_$($global:Port)" -ErrorAction SilentlyContinue
 }
 
 #
@@ -177,46 +235,18 @@ Function Main {
         }
     }
 
-    # publish webserver URL prefix (default, publish to localhost)
+    # try starting the http webserver
     If ($global:PublishLocalhost) {
-        #$global:ServerURL = "http://localhost:$($global:Port)/"
-        $global:ServerURL = "http://127.0.0.1:$($global:Port)/"
+        # localhost only hosting
+        Start-Webserver -ServerPort $global:Port
     } Else {
-        # Often global publish, Requires Elevation on Windows or Root on Linux in the TCP/IP stack
-        $global:ServerURL = "http://*:$($global:Port)/"
+        # public hosting
+        Start-Webserver -ServerUrlPrefixes "*" -ServerPort $global:Port
     }
 
-    # Load Webplugin's
-    DynamicLoad-WebPlugins
 
-    # allow Windows firewall rule
-    New-NetFirewallRule -DisplayName "webserver_$($global:Port)" -Profile @('Domain', 'Private') -Direction Inbound -Action Allow -Protocol TCP -LocalPort @($global:Port) -ErrorAction SilentlyContinue
-
-    # Http Server
-    #$global:Http = [System.Net.HttpListener]::new() 
-
+    # start listening loop
     If ($global:Http) {
-        # Hostname and port to listen on
-        $global:Http.Prefixes.Add($global:ServerURL)
-
-        #$global:Http.AuthenticationSchemes = [System.Net.AuthenticationSchemes]::IntegratedWindowsAuthentication
-
-        # Start the Http Server
-        $global:Http.Start()
-
-        # Log ready message to terminal 
-        If ($global:Http.IsListening) {
-            Write-Host "[!] HTTP Server hosting"
-            Write-Host " -> Serving URL $($global:Http.Prefixes)"
-        } Else {
-            Write-Host "[!] HTTP Server failed"
-            $global:Http.Stop()
-            #$global:Http.Close()
-            Exit-Bailout
-        }
-
-
-        # Listen for requests in a loop
         While ($global:Http.IsListening) {
 
             # Get Request Url
@@ -247,9 +277,41 @@ Function Main {
             #UserEscaped    : False
             #UserInfo       :
 
+            #AbsolutePath   : /someapp/someapp.html
+            #AbsoluteUri    : http://localhost:8080/someapp/someapp.html
+            #LocalPath      : /someapp/someapp.html
+            #Authority      : localhost:8080
+            #HostNameType   : Dns
+            #IsDefaultPort  : False
+            #IsFile         : False
+            #IsLoopback     : True
+            #PathAndQuery   : /someapp/someapp.html
+            #Segments       : {/, someapp/, someapp.html}
+            #IsUnc          : False
+            #Host           : localhost
+            #Port           : 8080
+            #Query          : 
+            #Fragment       : 
+            #Scheme         : http
+            #OriginalString : http://localhost:8080/someapp/someapp.html
+            #DnsSafeHost    : localhost
+            #IdnHost        : localhost
+            #IsAbsoluteUri  : True
+            #UserEscaped    : False
+            #UserInfo       : 
+
             Write-Host "** Request : $($context.Request.UserHostAddress)  =>  $($context.Request.Url)"
             Write-Host "   -> Page : $($context.Request.Url.AbsolutePath)"
             Write-Host ""
+
+            # extra verbose for troubleshooting or debugging
+            If ($global:DebugExtraVerbose) {
+                Write-Host "AbsUri      : $($context.Request.Url.AbsoluteUri)"
+                Write-Host "RawUrl Path : $($context.Request.RawUrl)"
+                Write-Host "Abs Path    : $($context.Request.Url.AbsolutePath)"
+                Write-Host "Local Path  : $($context.Request.Url.LocalPath)"
+                Write-Host "Referral : $($context.Request.UrlReferrer)"
+            }
 
             # kill webserver
             # http://127.0.0.1/kill'
@@ -327,7 +389,7 @@ Function Main {
                     $setCookie.Value = "$([Environment]::GetEnvironmentVariable("USERNAME"))"
                     $setCookie.Expires = (Get-Date).AddDays(1)
                     $setCookie.Secure = $true
-                #$setCookie.GetHashCode()
+                    #$setCookie.GetHashCode()
                 }
 
                 #$context.Response.Cookies.Add($setCookie)
@@ -343,29 +405,32 @@ Function Main {
                 $context.Response.OutputStream.Close()                
             }
 
+
             # Request root and other files
             # http://127.0.0.1/<filename>.<ext>
             If ($context.Request.HttpMethod -eq 'GET' -and $context.Request.RawUrl -like "/*") {
-            #If ($context.Request.HttpMethod -eq 'GET') {
-
-                # if we're at root '/' then replace with '/index.html'. Otherwise, extract pagename
+                # if we're at root '/' then replace with '/index.html'. Otherwise, extract pagename.
                 [string]$requestedFilename = ""
-
+                
                 # load a file (contains '.' like ../file.css or ../file.html)
-                If ($context.Request.Url.LocalPath.Contains('.')) {
+                If ($context.Request.Url.AbsolutePath.Contains('.')) {
                     $requestedFilename = $context.Request.Url.AbsolutePath
                 } Else {
                     # fix all lose ends in a URL to we fallback to safety
-                    If ($context.Request.Url.LocalPath.EndsWith('/')) {
-                        $requestedFilename = $context.Request.Url.LocalPath + "index.html"
+                    If ($context.Request.Url.AbsolutePath.EndsWith('/')) {
+                        $requestedFilename = $context.Request.Url.AbsolutePath + $global:IndexPage
                     } Else {
-                        $requestedFilename = $context.Request.Url.LocalPath + "/index.html"
+                        # if there is no ending slash in the provided Url, try redirecting to the full url + index page.
+                        $context.Response.Redirect($context.Request.Url.AbsoluteUri + "/" + $global:IndexPage)
                     }
                 }
-       
+ 
                 # build local path for serving.
                 # Replace forward slash with back slash on Windows. On Linux it will stay the same.
                 [string]$pagetoload = "$($global:ContentFolder)$($requestedFilename.Replace("/", [IO.Path]::DirectorySeparatorChar))"
+                
+                Write-Host "requested Filename : $($requestedFilename)"
+                Write-Host "Page to load : $($pagetoload)"
 
                 If (Test-Path -Path $pagetoload) {
                     #[string]$somefile = Get-Content -Path $pagetoload -Raw
@@ -413,6 +478,8 @@ Function Main {
                 Invoke-ProcessPostBack -context $context
             }        
 
+            Write-Host ""
+
             # Do not stop debugging in ISE or Powershell with VSCode
             # better redirect to http://localhost:<webserver_port>/kill" for clean shutdown
 
@@ -420,9 +487,6 @@ Function Main {
     } else {
         Write-Host "[!] Http server failed!?" -ForegroundColor "Red"
     }
-
-    # remove Windows firewall rule
-    Remove-NetFirewallRule -DisplayName "webserver_$($global:Port)" -ErrorAction SilentlyContinue
 
     # exit Gracefully
     Exit-Gracefully
