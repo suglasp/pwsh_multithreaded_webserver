@@ -4,7 +4,7 @@
 # Create a new webserver plugin (Powershell Module).
 #
 # created : 02/11/2020
-# changed : 02/11/2020
+# changed : 04/11/2020
 #
 
 # global vars
@@ -16,7 +16,20 @@ If (-Not (Test-Path $global:WebPluginsPath)) {
     New-Item $global:WebPluginsPath -ItemType Directory
 }
 
-[string]$NewPluginName = Read-Host -Prompt "Enter Webserver Plugin Name"
+[string]$NewPluginName = Read-Host -Prompt "Enter Webserver Plugin Name (ex.: Web.MyPlugin)"
+[string]$NewPluginDesc = Read-Host -Prompt "Enter Plugin Description"
+[string]$NewPluginAuthor = Read-Host -Prompt "Enter Plugin Author Name"
+
+# sanity checks
+If ([string]::IsNullOrEmpty($NewPluginName)) {
+  Write-Warning "You must provide a Plugin name!"
+  Exit(-1)
+}
+
+# set default Author name
+If ([string]::IsNullOrEmpty($NewPluginAuthor)) {
+    $NewPluginAuthor = [environment]::GetEnvironmentVariable("USERNAME")
+}
 
 # create module manifest file
 If (-Not (Test-Path "$($global:WebPluginsPath)\$($NewPluginName)")) {
@@ -30,10 +43,10 @@ If (-Not (Test-Path "$($global:WebPluginsPath)\$($NewPluginName)")) {
     $params = @{
         Path = $manifestFilename
         RootModule = $(Split-Path $moduleFilename -Leaf)
-        ModuleVersion = '0.1.0'
+        ModuleVersion = '1.0.0'
         Guid = $guid
-        Author = $($env:USERNAME)
-        Description = 'Webserver Plugin'
+        Author = $($NewPluginAuthor)
+        Description = $($NewPluginDesc)
         #RequiredModules = @("Web.Global")
     }
     New-ModuleManifest @params
@@ -42,10 +55,14 @@ If (-Not (Test-Path "$($global:WebPluginsPath)\$($NewPluginName)")) {
     New-Item -Path $moduleFilename -ItemType File
 
     # add some content already
+    Add-Content -Path $moduleFilename -Value ''
     Add-Content -Path $moduleFilename -Value '# My Webserver plugin'
     Add-Content -Path $moduleFilename -Value ''
     Add-Content -Path $moduleFilename -Value '$CommandsToExport = @()'
     Add-Content -Path $moduleFilename -Value ''
+    Add-Content -Path $moduleFilename -Value '#'
+    Add-Content -Path $moduleFilename -Value '# Function : Invoke-HelloWorld'
+    Add-Content -Path $moduleFilename -Value '#'
     Add-Content -Path $moduleFilename -Value 'Function Invoke-HelloWorld {'
     Add-Content -Path $moduleFilename -Value '  Write-Output "Hello"'
     Add-Content -Path $moduleFilename -Value '}'
@@ -55,7 +72,7 @@ If (-Not (Test-Path "$($global:WebPluginsPath)\$($NewPluginName)")) {
     Add-Content -Path $moduleFilename -Value 'Export-ModuleMember -Function $CommandsToExport'
     Add-Content -Path $moduleFilename -Value ''
 
-    Write-Host "Webserver Plugin created"
+    Write-Host "Webserver Plugin has been created!"
 } else {
     Write-Warning "Webserver Plugin with same name already present!"
     Exit(-1)
