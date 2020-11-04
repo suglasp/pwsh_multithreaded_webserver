@@ -73,6 +73,11 @@ Reset webserver stack from Powershell:
 Otherwise, you can just run it normally if it's for testing and running on port tcp/8080 or any of tcp/[1025-65535].*
 
 
+**Provided plugins**
+- Web.Cookies : plugin to handle session cookies
+- Web.PostbackForms : basic plugin sample for form postback processing
+
+
 **Examples included**
 - http://localhost:<instance_port>/kill   :  route to shutdown the webserver
 - http://localhost:<instance_port>/ping   :  route to ping the webserver (used with .\pwsh_webserver_bootstrap.ps1 -verify)
