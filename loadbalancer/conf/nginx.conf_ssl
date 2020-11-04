@@ -38,7 +38,7 @@ http {
 
         # redirect port 80 (http) to 443 (https)
         location / {
-            return 302 https://localhost;
+            return 302 https://localhost$request_uri;
         }
     }
 
@@ -57,11 +57,13 @@ http {
             proxy_set_header Host $host;
             proxy_set_header    X-Real-IP       $remote_addr;
             proxy_set_header    X-Forwared-For  $proxy_add_x_forwarded_for;
-            proxy_http_version 1.0;
+            proxy_http_version 1.1;
             #proxy_ignore_client_abort on;
 			
             # compression offloading
             proxy_set_header    Accept-Encoding "";
+			
+			#port_in_redirect off;
         }
 		
         ssl_certificate      "cert.pem";
