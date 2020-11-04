@@ -432,7 +432,7 @@ Function Main {
                         $requestedFilename = $context.Request.Url.AbsolutePath + $global:IndexPage
                     } Else {
                         # if there is no ending slash in the provided Url, try redirecting to the full url + index page.
-                        $redirectUrl = $context.Request.Url.AbsoluteUri + "/" + $global:IndexPage
+                        $redirectUrl = $context.Request.Url.AbsolutePath + "/" + $global:IndexPage
                         Write-Host " -> Redirecting client to $($redirectUrl)."
                         $context.Response.Redirect($redirectUrl)
                         $context.Response.Close()
