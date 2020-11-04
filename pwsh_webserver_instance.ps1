@@ -62,7 +62,7 @@ Function Start-Webserver {
                 }
 
                 # allow Windows firewall rule
-                New-NetFirewallRule -DisplayName "webserver_$($global:Port)" -Profile @('Domain', 'Private') -Direction Inbound -Action Allow -Protocol TCP -LocalPort @($global:Port) -ErrorAction SilentlyContinue
+                New-NetFirewallRule -DisplayName "webserver_$($global:Port)" -Profile @('Domain', 'Private', 'Public') -Direction Inbound -Action Allow -Protocol TCP -LocalPort @($global:Port) -ErrorAction SilentlyContinue
             } Else {
                 Write-Host "[!] HTTP Server has soft failed"
                 $global:Http.Close()

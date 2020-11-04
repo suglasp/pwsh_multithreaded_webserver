@@ -74,8 +74,8 @@ Function Start-Loadbalancer {
     Write-Host "* Starting loadbalancer..."
     If (@(Get-Process -Name "nginx" -ErrorAction SilentlyContinue).Count -eq 0) {
         # allow Loadbalancer Windows firewall rule
-        New-NetFirewallRule -DisplayName "webserver_loadbalancer_http" -Profile @('Domain', 'Private') -Direction Inbound -Action Allow -Protocol TCP -LocalPort @($global:LoadbalancerStartPort) -ErrorAction SilentlyContinue
-        New-NetFirewallRule -DisplayName "webserver_loadbalancer_https" -Profile @('Domain', 'Private') -Direction Inbound -Action Allow -Protocol TCP -LocalPort @($global:LoadbalancerStartPortSSL) -ErrorAction SilentlyContinue
+        New-NetFirewallRule -DisplayName "webserver_loadbalancer_http" -Profile @('Domain', 'Private', 'Public') -Direction Inbound -Action Allow -Protocol TCP -LocalPort @($global:LoadbalancerStartPort) -ErrorAction SilentlyContinue
+        New-NetFirewallRule -DisplayName "webserver_loadbalancer_https" -Profile @('Domain', 'Private', 'Public') -Direction Inbound -Action Allow -Protocol TCP -LocalPort @($global:LoadbalancerStartPortSSL) -ErrorAction SilentlyContinue
 
         # start loadbalancer process(es)
         Start-Process -FilePath "$($global:LoadbalancerPath)\$($global:NginxExe)" -WorkingDirectory "$($global:LoadbalancerPath)" -WindowStyle $global:WNDVisibility
