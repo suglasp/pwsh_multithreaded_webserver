@@ -241,7 +241,7 @@ Function Main {
         Start-Webserver -ServerPort $global:Port
     } Else {
         # public hosting
-        Start-Webserver -ServerUrlPrefixes "*" -ServerPort $global:Port
+        Start-Webserver -ServerUrlPrefixes @("*") -ServerPort $global:Port
     }
 
 
