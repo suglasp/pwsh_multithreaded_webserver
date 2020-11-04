@@ -359,54 +359,29 @@ Function Main {
                 [string]$cookieResponse = "<html><head><title>cookie</title><body>Cookies!</body></html>"
 
                 # ---- read cookie(s)
-                [System.Net.CookieCollection]$cookies = $context.Request.Cookies
+                [System.Net.Cookie]$getCookie = Get-WebCookie -Context $context -CookieID "ID"
 
-                $cookieFound = $false
-
-                If ($cookies) {
-                    ForEach($getCookie in $cookies) {
-                        #Write-Host $getCookie.Name
-                        If ($getCookie.Name -eq "ID") {
-                            #[System.Net.Cookie]$getCookie = $cookies["ID"]
-                            Write-Host "Found cookie : $($getCookie.Name)=$($getCookie.Value)"
-
-                            $cookieFound = $true
-                        }
-                    }                    
+                If ($getCookie) {
+                    Write-Host "Found cookie : $($getCookie.Name) = $($getCookie.Value)"
+                } Else {
+                    Write-Host "No cookie found with name $([char](34))ID$([char](34))"
                 }
-
-                $context.Request.Cookies
-
                 # ---- read cookie(s)
 
-                #resposed to the request
+                #respose to the request
                 $buffer = [System.Text.Encoding]::UTF8.GetBytes($cookieResponse)
                 $context.Response.Headers.Add("Content-Type","text/html")
                 $context.Response.StatusCode = [int32][System.Net.HttpStatusCode]::OK
                 $context.Response.StatusDescription = "COOKIES OK"                
 
-                # ---- write a cookie
-                [System.Net.Cookie]$setCookie = [System.Net.Cookie]::new()
-
-                If ($cookieFound) {
-                    # clear cookie
-                    $setCookie.Name = "ID"
-                    $setCookie.Value = ""
-                } else {
-                    # set cookie
-                    $setCookie.Name = "ID"
-                    $setCookie.Value = "$([Environment]::GetEnvironmentVariable("USERNAME"))"
-                    $setCookie.Expires = (Get-Date).AddDays(1)
-                    $setCookie.Secure = $true
-                    #$setCookie.GetHashCode()
+                # ---- write a cookie                
+                If ($getCookie) {
+                    # if exists, clear cookie
+                    Clear-WebCookie -Context $context -CookieID "ID"
+                } Else {
+                    # if not exitst, make cookie
+                    Set-WebCookie -Context $context -CookieID "ID" -CookieValue "$([Environment]::GetEnvironmentVariable("USERNAME"))"
                 }
-
-                #$context.Response.Cookies.Add($setCookie)
-                $context.Response.SetCookie($setCookie)
-                #$context.Response.AddHeader("Set-Cookie", "$($setCookie.Name)=$($setCookie.Value)");
-                #$context.Response.AppendHeader("Set-Cookie", "name2=value2");
-
-                $context.Response.Cookies
                 # ---- write a cookie
 
                 $context.Response.ContentLength64 = $buffer.Length
