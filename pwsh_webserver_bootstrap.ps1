@@ -47,6 +47,8 @@ $ProgressPreference = "SilentlyContinue"
 [string]$global:PowershellExe = "powershell.exe"
 [string]$global:NginxExe = "nginx.exe"
 [System.Diagnostics.ProcessWindowStyle]$global:WNDVisibility = [System.Diagnostics.ProcessWindowStyle]::Minimized
+[System.Diagnostics.ProcessPriorityClass]$global:WebPriority = [System.Diagnostics.ProcessPriorityClass]::High
+
 
 
 #
@@ -65,8 +67,23 @@ Function Start-Loadbalancer {
     For([int32]$port = $global:WebStartPort; $port -lt ($global:WebStartPort + $global:WebCount); $port++) {
         Write-Host "  Instance : $($port.ToString())"
         # could also be done through runspaces. Keep it simple.
-        Start-Process -FilePath "$($global:PowershellExe)" -ArgumentList "-ExecutionPolicy ByPass -File $($global:WorkFolder)\pwsh_webserver_instance.ps1 -port $($port.ToString())" -WorkingDirectory "$($global:WorkFolder)" -WindowStyle $global:WNDVisibility
+
+        # start process of a web instance
+        #Start-Process -FilePath "$($global:PowershellExe)" -ArgumentList "-ExecutionPolicy ByPass -File $($global:WorkFolder)\pwsh_webserver_instance.ps1 -port $($port.ToString())" -WorkingDirectory "$($global:WorkFolder)" -WindowStyle $global:WNDVisibility
         
+        # start process of a web instance (High priority)
+        $webInstance = New-Object System.Diagnostics.Process
+        $webInstance.StartInfo.FileName = "$($global:PowershellExe)"
+        $webInstance.StartInfo.Arguments = "-ExecutionPolicy ByPass -File $($global:WorkFolder)\pwsh_webserver_instance.ps1 -port $($port.ToString())"
+        $webInstance.StartInfo.WorkingDirectory = "$($global:WorkFolder)"
+        $webInstance.StartInfo.WindowStyle = $global:WNDVisibility
+        $webInstance.Start()
+
+        # change process priority
+        If (-not ($webInstance.HasExited)) {
+            $webInstance.PriorityClass = $global:WebPriority
+        }
+
         Start-Sleep -Seconds (1 * $global:WebCount)
     }
 
