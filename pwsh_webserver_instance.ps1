@@ -339,7 +339,9 @@ Function Main {
                 $context.Response.StatusDescription = "PING OK"
                 $context.Response.ContentLength64 = $buffer.Length
                 $context.Response.OutputStream.Write($buffer, 0, $buffer.Length)
-                $context.Response.OutputStream.Close()                
+                $context.Response.OutputStream.Close()
+                
+                Continue          
             }
                         
 
@@ -402,7 +404,9 @@ Function Main {
 
                 $context.Response.ContentLength64 = $buffer.Length
                 $context.Response.OutputStream.Write($buffer, 0, $buffer.Length)
-                $context.Response.OutputStream.Close()                
+                $context.Response.OutputStream.Close()        
+                
+                Continue        
             }
 
 
@@ -470,12 +474,16 @@ Function Main {
                     $context.Response.StatusDescription = "Page not found"
                     $context.Response.Close()
                 }
+
+                Continue
             }
 
             # forms backend response (from a Plugin)
             # http://127.0.0.1/backend/post'
             If ($context.Request.HttpMethod -eq 'POST' -and $context.Request.RawUrl -eq '/backend/post') {
                 Invoke-ProcessPostBack -context $context
+
+                Continue
             }        
 
             Write-Host ""
