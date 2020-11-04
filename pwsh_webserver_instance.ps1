@@ -300,17 +300,24 @@ Function Main {
             #UserEscaped    : False
             #UserInfo       : 
 
-            Write-Host "** Request : $($context.Request.UserHostAddress)  =>  $($context.Request.Url)"
+            # timestamp info of the request
+            [string]$requestTimeStamp = $(Get-Date).ToString("dd-MM-yyyy@HH:mm:ss")
+
+            # write out we have incoming a request
+            Write-Host ""
+            Write-Host "** [$($requestTimeStamp)] Request : $($context.Request.UserHostAddress)  =>  $($context.Request.Url)"
             Write-Host "   -> Page : $($context.Request.Url.AbsolutePath)"
             Write-Host ""
 
             # extra verbose for troubleshooting or debugging
             If ($global:DebugExtraVerbose) {
+                Write-Host "-- VERBOSE --"
                 Write-Host "AbsUri      : $($context.Request.Url.AbsoluteUri)"
                 Write-Host "RawUrl Path : $($context.Request.RawUrl)"
                 Write-Host "Abs Path    : $($context.Request.Url.AbsolutePath)"
                 Write-Host "Local Path  : $($context.Request.Url.LocalPath)"
                 Write-Host "Referral : $($context.Request.UrlReferrer)"
+                Write-Host "-- VERBOSE --"
             }
 
             # kill webserver
@@ -341,7 +348,7 @@ Function Main {
                 $context.Response.OutputStream.Write($buffer, 0, $buffer.Length)
                 $context.Response.OutputStream.Close()
                 
-                Continue          
+                #Continue          
             }
                         
 
@@ -406,7 +413,7 @@ Function Main {
                 $context.Response.OutputStream.Write($buffer, 0, $buffer.Length)
                 $context.Response.OutputStream.Close()        
                 
-                Continue        
+                #Continue        
             }
 
 
@@ -425,7 +432,11 @@ Function Main {
                         $requestedFilename = $context.Request.Url.AbsolutePath + $global:IndexPage
                     } Else {
                         # if there is no ending slash in the provided Url, try redirecting to the full url + index page.
-                        $context.Response.Redirect($context.Request.Url.AbsoluteUri + "/" + $global:IndexPage)
+                        $redirectUrl = $context.Request.Url.AbsoluteUri + "/" + $global:IndexPage
+                        Write-Host " -> Redirecting client to $($redirectUrl)."
+                        $context.Response.Redirect($redirectUrl)
+                        $context.Response.Close()
+                        #Continue
                     }
                 }
  
@@ -433,49 +444,51 @@ Function Main {
                 # Replace forward slash with back slash on Windows. On Linux it will stay the same.
                 [string]$pagetoload = "$($global:ContentFolder)$($requestedFilename.Replace("/", [IO.Path]::DirectorySeparatorChar))"
                 
-                Write-Host "requested Filename : $($requestedFilename)"
-                Write-Host "Page to load : $($pagetoload)"
+                If (-not([string]::IsNullOrEmpty($pagetoload)) -and ($pagetoload.Contains('.'))) {
+                    Write-Host "requested Filename : $($requestedFilename)"
+                    Write-Host "Page to load : $($pagetoload)"
 
-                If (Test-Path -Path $pagetoload) {
-                    #[string]$somefile = Get-Content -Path $pagetoload -Raw
-                    #$buffer = [System.Text.Encoding]::UTF8.GetBytes($somefile)
+                    If (Test-Path -Path $pagetoload) {
+                        #[string]$somefile = Get-Content -Path $pagetoload -Raw
+                        #$buffer = [System.Text.Encoding]::UTF8.GetBytes($somefile)
 
-                    $buffer = [System.IO.File]::ReadAllBytes($pagetoload)
+                        $buffer = [System.IO.File]::ReadAllBytes($pagetoload)
 
-                    Switch -wildcard ($requestedFilename) {
-                        ".htm" { $context.Response.Headers.Add("Content-Type","text/html") }
-                        ".html" { $context.Response.Headers.Add("Content-Type","text/html") }
-                        ".css" { $context.Response.Headers.Add("Content-Type","text/css") }
-                        ".csv" { $context.Response.Headers.Add("Content-Type","text/csv") }
-                        ".txt" { $context.Response.Headers.Add("Content-Type","text/plain") }
-                        ".xml" { $context.Response.Headers.Add("Content-Type","text/xml") }
-                        ".js" { $context.Response.Headers.Add("Content-Type","text/javascript") }
-                        ".ico" { $context.Response.Headers.Add("Content-Type","image/vnd.microsoft.icon") }
-                        ".jpg" { $context.Response.Headers.Add("Content-Type","image/jpeg") }
-                        ".jpeg" { $context.Response.Headers.Add("Content-Type","image/jpeg") }
-                        ".png" { $context.Response.Headers.Add("Content-Type","image/png") }
-                        ".bmp" { $context.Response.Headers.Add("Content-Type","image/bmp") }
-                        ".gif" { $context.Response.Headers.Add("Content-Type","image/gif") }
-                        ".pdf" { $context.Response.Headers.Add("Content-Type","application/pdf") }
-                        ".zip" { $context.Response.Headers.Add("Content-Type","application/zip") }
-                        ".json" { $context.Response.Headers.Add("Content-Type","application/json") }       
-                        ".7z" { $context.Response.Headers.Add("Content-Type","application/x-7z-compressed") }                        
-                        ".wav" { $context.Response.Headers.Add("Content-Type","audio/wav") }
-                        ".ttf" { $context.Response.Headers.Add("Content-Type","font/ttf") }               
-                    }
+                        Switch -wildcard ($requestedFilename) {
+                            ".htm" { $context.Response.Headers.Add("Content-Type","text/html") }
+                            ".html" { $context.Response.Headers.Add("Content-Type","text/html") }
+                            ".css" { $context.Response.Headers.Add("Content-Type","text/css") }
+                            ".csv" { $context.Response.Headers.Add("Content-Type","text/csv") }
+                            ".txt" { $context.Response.Headers.Add("Content-Type","text/plain") }
+                            ".xml" { $context.Response.Headers.Add("Content-Type","text/xml") }
+                            ".js" { $context.Response.Headers.Add("Content-Type","text/javascript") }
+                            ".ico" { $context.Response.Headers.Add("Content-Type","image/vnd.microsoft.icon") }
+                            ".jpg" { $context.Response.Headers.Add("Content-Type","image/jpeg") }
+                            ".jpeg" { $context.Response.Headers.Add("Content-Type","image/jpeg") }
+                            ".png" { $context.Response.Headers.Add("Content-Type","image/png") }
+                            ".bmp" { $context.Response.Headers.Add("Content-Type","image/bmp") }
+                            ".gif" { $context.Response.Headers.Add("Content-Type","image/gif") }
+                            ".pdf" { $context.Response.Headers.Add("Content-Type","application/pdf") }
+                            ".zip" { $context.Response.Headers.Add("Content-Type","application/zip") }
+                            ".json" { $context.Response.Headers.Add("Content-Type","application/json") }       
+                            ".7z" { $context.Response.Headers.Add("Content-Type","application/x-7z-compressed") }                        
+                            ".wav" { $context.Response.Headers.Add("Content-Type","audio/wav") }
+                            ".ttf" { $context.Response.Headers.Add("Content-Type","font/ttf") }               
+                        }
             
-                    #$Context.Response.ContentType = [System.Web.MimeMapping]::GetMimeMapping($pagetoload)
-                    $context.Response.ContentLength64 = $buffer.Length
-                    $context.Response.OutputStream.Write($buffer, 0, $buffer.Length) 
-                    $context.Response.OutputStream.Close()
-                } Else {
-                    # woops, 404                
-                    $context.Response.StatusCode = [int32][System.Net.HttpStatusCode]::NotFound
-                    $context.Response.StatusDescription = "Page not found"
-                    $context.Response.Close()
+                        #$Context.Response.ContentType = [System.Web.MimeMapping]::GetMimeMapping($pagetoload)
+                        $context.Response.ContentLength64 = $buffer.Length
+                        $context.Response.OutputStream.Write($buffer, 0, $buffer.Length) 
+                        $context.Response.OutputStream.Close()
+                    } Else {
+                        # woops, 404                
+                        $context.Response.StatusCode = [int32][System.Net.HttpStatusCode]::NotFound
+                        $context.Response.StatusDescription = "Page not found"
+                        $context.Response.Close()
+                    }
                 }
 
-                Continue
+                #Continue
             }
 
             # forms backend response (from a Plugin)
