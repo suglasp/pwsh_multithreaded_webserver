@@ -63,7 +63,7 @@ http {
             # compression offloading
             proxy_set_header    Accept-Encoding "";
 			
-			#port_in_redirect off;
+            #port_in_redirect off;
         }
 		
         ssl_certificate      "cert.pem";
