@@ -4,7 +4,7 @@
 # Bootstrap script for webserver instances (Powershell) and Loadbalancer (Nginx)
 #
 # created : 01/11/2020
-# changed : 03/11/2020
+# changed : 04/11/2020
 #
 # Only tested on Windows 10 and Server 2019 with Poweshell 5.1 and Powershell 7.0.3.
 # Currently will not run on Linux, unless you change $global:PowershellExe and $global:NginxExe.
