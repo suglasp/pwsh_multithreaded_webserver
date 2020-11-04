@@ -1,14 +1,18 @@
 
 #
 # Pieter De ridder
-# My Webserver plugin
+# My Webserver plugin to test Form postback input
 #
 # Created : 02/11/2020
-# Updated : 02/11/2020
+# Updated : 04/11/2020
 #
 
 $CommandsToExport = @()
 
+
+#
+# Function : Invoke-ProcessPostBack
+#
 Function Invoke-ProcessPostBack {
     Param (
         [System.Net.HttpListenerContext]$context
