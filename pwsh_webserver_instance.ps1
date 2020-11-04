@@ -27,7 +27,7 @@
 #
 Function Start-Webserver {
     Param (
-        [System.Array]$ServerUrlPrefixes = @("localhost", "127.0.0.1"),
+        [System.Array]$ServerUrlPrefixes = @("localhost", "127.0.0.1", "[::1]"),
         [UInt16]$ServerPort = 8080,
         [System.Net.AuthenticationSchemes]$Authentication = [System.Net.AuthenticationSchemes]::Anonymous
     )
