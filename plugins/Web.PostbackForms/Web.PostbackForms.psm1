@@ -1,10 +1,10 @@
 
 #
-# Pieter De ridder
+# Pieter De Ridder
 # My Webserver plugin to test Form postback input
 #
 # Created : 02/11/2020
-# Updated : 04/11/2020
+# Updated : 05/11/2020
 #
 
 $CommandsToExport = @()

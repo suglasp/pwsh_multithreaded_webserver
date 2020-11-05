@@ -1,10 +1,10 @@
 
 #
-# Pieter De ridder
+# Pieter De Ridder
 # Webserver Cookies Plugin
 #
 # Created : 04/11/2020
-# Updated : 04/11/2020
+# Updated : 05/11/2020
 #
 
 $CommandsToExport = @()
