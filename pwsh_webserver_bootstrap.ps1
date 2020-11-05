@@ -4,7 +4,7 @@
 # Bootstrap script for webserver instances (Powershell) and Loadbalancer (Nginx)
 #
 # created : 01/11/2020
-# changed : 04/11/2020
+# changed : 05/11/2020
 #
 # Only tested on Windows 10 and Server 2019 with Poweshell 5.1 and Powershell 7.0.3.
 # Currently will not run on Linux, unless you change $global:PowershellExe and $global:NginxExe.
@@ -30,7 +30,7 @@
 
 $ProgressPreference = "SilentlyContinue"
 
-# global vars
+#region Global vars
 [string]$global:WorkFolder = $PSScriptRoot
 [string]$global:LoadbalancerPath = "$($global:WorkFolder)\loadbalancer"
 [string]$global:LoadbalancerPIDFile = "$($global:LoadbalancerPath)\logs\nginx.pid"
@@ -48,9 +48,10 @@ $ProgressPreference = "SilentlyContinue"
 [string]$global:NginxExe = "nginx.exe"
 [System.Diagnostics.ProcessWindowStyle]$global:WNDVisibility = [System.Diagnostics.ProcessWindowStyle]::Minimized
 [System.Diagnostics.ProcessPriorityClass]$global:WebPriority = [System.Diagnostics.ProcessPriorityClass]::High
+#endregion
 
 
-
+#region Helper Functions
 #
 # Function : Start-Loadbalancer
 #
@@ -324,8 +325,11 @@ Function Clean-AllLogs {
     # clean webinstances log files
     Clean-LogPath -logPath $global:WebLogsPath -filter "PowerShell_transcript*.txt"
 }
+#endregion
 
 
+
+#region Main function
 #
 # Function Main
 #
@@ -396,7 +400,7 @@ Function Main {
 
     Exit(0)
 }
-
+#endregion
 
 
 # -------------------------------------------

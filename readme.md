@@ -85,7 +85,8 @@ Otherwise, you can just run it normally if it's for testing and running on port 
 
 **Provided plugins**
 - Web.Cookies : plugin to handle session cookies
-- Web.PostbackForms : basic plugin sample for form postback processing
+- Web.PostbackSomeApp : basic plugin sample for form postback processing (someapp example)
+- Web.Redirect : plugin to redirect server side to other page
 
 
 **Examples included**

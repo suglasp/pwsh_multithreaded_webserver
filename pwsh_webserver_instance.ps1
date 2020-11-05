@@ -10,7 +10,8 @@
 # This script is written with cross platform in mind.
 #
 
-# global vars
+
+#region Global vars
 [string]$global:WorkFolder = $PSScriptRoot
 [string]$global:ContentFolder = "$($global:WorkFolder)\content"
 [string]$global:WebPluginsPath = "$($global:WorkFolder)\plugins"
@@ -21,7 +22,11 @@
 [bool]$global:PublishLocalhost = $true
 [bool]$global:DebugExtraVerbose = $false
 [string]$global:IndexPage = "index.html"
+#endregion
 
+
+
+#region Helper Functions
 #
 # Function : Start-Webserver
 #
@@ -152,9 +157,9 @@ Function DynamicLoad-WebPlugins {
             # If not already loaded, do load it!
             If (-not (Get-Module -Name $($plugin.Name))) {
                 Write-Host "[!] Loading plugin : $($plugin.Name)"
-                Import-Module $($plugin.Name)
+                Import-Module -Name $($plugin.Name) -Scope Local -DisableNameChecking
             } Else {
-                Write-Host "[i] Plugin already present : $($plugin.Name)"
+                Write-Host "[i] Plugin already present : $($plugin.Name) (some plugins have a dependency and are auto loaded)"
             }
         }
     }
@@ -175,7 +180,7 @@ Function DynamicUnload-WebPlugins {
     ForEach($plugin in $pluginsListLoaded) {
         If ($plugin.ModuleBase.Contains($global:WebPluginsPath)) {
             Write-Host "[!] Unloading plugin : $($plugin.Name)"
-            Remove-Module $($plugin.Name)
+            Remove-Module -Name $($plugin.Name) -Force
         }
     }
 
@@ -207,7 +212,10 @@ Function Stop-LocalLogging
         Stop-Transcript
     }
 }
+#endregion
 
+
+#region Main function
 #
 # Function : Main
 #
@@ -215,6 +223,9 @@ Function Main {
     Param (
         [System.Array]$Arguments
     )
+
+    # clear screen if needed
+    Clear-Host
 
     # enable logging
     Start-LocalLogging
@@ -349,7 +360,7 @@ Function Main {
                 $context.Response.OutputStream.Write($buffer, 0, $buffer.Length)
                 $context.Response.OutputStream.Close()
                 
-                #Continue          
+                Continue          
             }
                         
 
@@ -360,7 +371,7 @@ Function Main {
                 [string]$cookieResponse = "<html><head><title>cookie</title><body>Cookies!</body></html>"
 
                 # ---- read cookie(s)
-                [System.Net.Cookie]$getCookie = Get-WebCookie -Context $context -CookieID "ID"
+                [System.Net.Cookie]$getCookie = Get-WebCookie -Context $context -CookieSearchID "ID"
 
                 If ($getCookie) {
                     Write-Host "Found cookie : $($getCookie.Name) = $($getCookie.Value)"
@@ -389,7 +400,7 @@ Function Main {
                 $context.Response.OutputStream.Write($buffer, 0, $buffer.Length)
                 $context.Response.OutputStream.Close()        
                 
-                #Continue        
+                Continue
             }
 
 
@@ -409,10 +420,8 @@ Function Main {
                     } Else {
                         # if there is no ending slash in the provided Url, try redirecting to the full url + index page.
                         $redirectUrl = $context.Request.Url.AbsolutePath + "/" + $global:IndexPage
-                        Write-Host " -> Redirecting client to $($redirectUrl)."
-                        $context.Response.Redirect($redirectUrl)
-                        $context.Response.Close()
-                        #Continue
+                        Start-WebRedirect -Context $context -RelativeUrl $redirectUrl
+                        Continue
                     }
                 }
  
@@ -429,27 +438,28 @@ Function Main {
                         #$buffer = [System.Text.Encoding]::UTF8.GetBytes($somefile)
 
                         $buffer = [System.IO.File]::ReadAllBytes($pagetoload)
-
+                        $requestedFilename
                         Switch -wildcard ($requestedFilename) {
-                            ".htm" { $context.Response.Headers.Add("Content-Type","text/html") }
-                            ".html" { $context.Response.Headers.Add("Content-Type","text/html") }
-                            ".css" { $context.Response.Headers.Add("Content-Type","text/css") }
-                            ".csv" { $context.Response.Headers.Add("Content-Type","text/csv") }
-                            ".txt" { $context.Response.Headers.Add("Content-Type","text/plain") }
-                            ".xml" { $context.Response.Headers.Add("Content-Type","text/xml") }
-                            ".js" { $context.Response.Headers.Add("Content-Type","text/javascript") }
-                            ".ico" { $context.Response.Headers.Add("Content-Type","image/vnd.microsoft.icon") }
-                            ".jpg" { $context.Response.Headers.Add("Content-Type","image/jpeg") }
-                            ".jpeg" { $context.Response.Headers.Add("Content-Type","image/jpeg") }
-                            ".png" { $context.Response.Headers.Add("Content-Type","image/png") }
-                            ".bmp" { $context.Response.Headers.Add("Content-Type","image/bmp") }
-                            ".gif" { $context.Response.Headers.Add("Content-Type","image/gif") }
-                            ".pdf" { $context.Response.Headers.Add("Content-Type","application/pdf") }
-                            ".zip" { $context.Response.Headers.Add("Content-Type","application/zip") }
-                            ".json" { $context.Response.Headers.Add("Content-Type","application/json") }       
-                            ".7z" { $context.Response.Headers.Add("Content-Type","application/x-7z-compressed") }                        
-                            ".wav" { $context.Response.Headers.Add("Content-Type","audio/wav") }
-                            ".ttf" { $context.Response.Headers.Add("Content-Type","font/ttf") }               
+                            "*.htm" { $context.Response.Headers.Add("Content-Type","text/html") }
+                            "*.html" { $context.Response.Headers.Add("Content-Type","text/html") }
+                            "*.css" { $context.Response.Headers.Add("Content-Type","text/css") }
+                            "*.csv" { $context.Response.Headers.Add("Content-Type","text/csv") }
+                            "*.txt" { $context.Response.Headers.Add("Content-Type","text/plain") }
+                            "*.xml" { $context.Response.Headers.Add("Content-Type","text/xml") }
+                            "*.js" { $context.Response.Headers.Add("Content-Type","text/javascript") }
+                            "*.ico" { $context.Response.Headers.Add("Content-Type","image/vnd.microsoft.icon") }
+                            "*.jpg" { $context.Response.Headers.Add("Content-Type","image/jpeg") }
+                            "*.jpeg" { $context.Response.Headers.Add("Content-Type","image/jpeg") }
+                            "*.png" { $context.Response.Headers.Add("Content-Type","image/png") }
+                            "*.bmp" { $context.Response.Headers.Add("Content-Type","image/bmp") }
+                            "*.gif" { $context.Response.Headers.Add("Content-Type","image/gif") }
+                            "*.pdf" { $context.Response.Headers.Add("Content-Type","application/pdf") }
+                            "*.zip" { $context.Response.Headers.Add("Content-Type","application/zip") }
+                            "*.json" { $context.Response.Headers.Add("Content-Type","application/json") }       
+                            "*.7z" { $context.Response.Headers.Add("Content-Type","application/x-7z-compressed") }                        
+                            "*.wav" { $context.Response.Headers.Add("Content-Type","audio/wav") }
+                            "*.ttf" { $context.Response.Headers.Add("Content-Type","font/ttf") }
+                            Default { $context.Response.Headers.Add("Content-Type","application/octet-stream") }                            
                         }
             
                         #$Context.Response.ContentType = [System.Web.MimeMapping]::GetMimeMapping($pagetoload)
@@ -464,16 +474,15 @@ Function Main {
                     }
                 }
 
-                #Continue
+                Continue
             }
 
-            # forms backend response (from a Plugin)
-            # http://127.0.0.1/backend/post'
-            If ($context.Request.HttpMethod -eq 'POST' -and $context.Request.RawUrl -eq '/backend/post') {
-                Invoke-ProcessPostBack -context $context
-
+            # forms backend response (from Plugin Web.Postback)
+            # http://127.0.0.1/backend/someapppost'
+            If ($context.Request.HttpMethod -eq 'POST' -and $context.Request.RawUrl -eq '/backend/someapppost') {
+                Invoke-ProcessPostBack -Context $context
                 Continue
-            }        
+            }   
 
             Write-Host ""
 
@@ -488,6 +497,8 @@ Function Main {
     # exit Gracefully
     Exit-Gracefully
 }
+#endregion
+
 
 
 # -------------------------------------------
