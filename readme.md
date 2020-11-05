@@ -23,6 +23,16 @@ But the true naming is actually horizontal scalability.
 - pwsh_webserver_create_module.ps1   : quick script to create a plugin for the webserver
 
 
+
+The purpose is the bootstrap script launches a number of web instances (Powershell), and one Nginx instance.
+Nginx loadbalances all incomming requests over all web instances.
+Nginx should be listening to the ouside world, while the web instances should listen on localhost (in case on a single machine).
+For performance reasons, one could define routes in the Nginx config for static files (html, js, images, ...).
+It is possible by changing a parameter to let the web instances listen "outside".
+
+
+
+
 **Sub-Folders** 
 - ./content : all content goes here (html, htm, css, gif, jpg, png, ico, zip, ...)
 - ./loadbalancer : nginx binary (executable) and all subfolders need to be placed here
