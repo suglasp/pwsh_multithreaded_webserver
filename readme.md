@@ -46,7 +46,7 @@ Starting webserver instances in Powershell (*):
 > .\pwsh_webserver_bootstrap.ps1 -start
 
 Stopping running webserver instances in Powershell (*):
-> .\pwsh_webserver_bootstrap.ps1 -start
+> .\pwsh_webserver_bootstrap.ps1 -stop
 
 Restarting webserver instances in Powershell (*):
 > .\pwsh_webserver_bootstrap.ps1 -reload
