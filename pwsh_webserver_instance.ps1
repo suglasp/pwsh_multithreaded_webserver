@@ -4,7 +4,7 @@
 # Powershell webserver single instance
 #
 # created : 01/11/2020
-# changed : 04/11/2020
+# changed : 05/11/2020
 #
 # Only tested on Windows 10 and Server 2019 with Poweshell 5.1 and Powershell 7.0.3.
 # This script is written with cross platform in mind.
@@ -65,7 +65,7 @@ Function Start-Webserver {
                 New-NetFirewallRule -DisplayName "webserver_$($global:Port)" -Profile @('Domain', 'Private', 'Public') -Direction Inbound -Action Allow -Protocol TCP -LocalPort @($global:Port) -ErrorAction SilentlyContinue
             } Else {
                 Write-Host "[!] HTTP Server has soft failed"
-                $global:Http.Close()
+                #$global:Http.Close()
                 $global:Http.Stop()
                 
                 Exit-Bailout
@@ -83,6 +83,7 @@ Function Start-Webserver {
 Function Stop-Webserver {
     # shutdown http server
     If ($global:Http.IsListening) {
+		#$global:Http.Close()
         $global:Http.Stop()
         $global:Http = $null
     }
