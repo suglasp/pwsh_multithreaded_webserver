@@ -9,6 +9,39 @@
 
 $CommandsToExport = @()
 
+
+#
+# Function : Get-WebCookie
+#
+Function Get-WebCookie {
+    Param (
+		[Parameter( Mandatory = $True )]
+        [System.Net.HttpListenerContext]$Context,
+		[Parameter( Mandatory = $True )]
+		[string]$CookieSearchID
+    )
+
+    Write-Host " -> Get cookie"
+
+    [System.Net.Cookie]$foundCookie = $null
+
+    If (($global:http) -and ($Context)) {	
+		[System.Net.CookieCollection]$cookiesList = $context.Request.Cookies
+
+		If ($cookiesList) {
+			ForEach($getCookie In $cookiesList) {
+				If ($getCookie.Name.ToLowerInvariant().Equals($CookieSearchID.ToLowerInvariant())) {
+                    Write-Host "    found."
+					$foundCookie = $getCookie
+				}
+			}
+		}
+    }
+	
+	Return $foundCookie
+}
+$CommandsToExport += "Get-WebCookie"
+
 #
 # Function : Set-WebCookie
 #
@@ -22,16 +55,18 @@ Function Set-WebCookie {
 		[string]$CookieValue
     )
 
+    Write-Host " -> Set cookie"
+
     If (($global:http) -and ($Context)) {
         [System.Net.Cookie]$setCookie = [System.Net.Cookie]::new()
 
 		# set cookie
 		$setCookie.Name = "$($CookieID)"
 		$setCookie.Value = "$($CookieValue)"
-		$setCookie.Expires = (Get-Date).AddDays(1)
+		#$setCookie.Expires = (Get-Date).AddDays(1)
 		$setCookie.Secure = $true
-		$Context.Response.SetCookie($setCookie)
-		#$context.Response.AddHeader("Set-Cookie", "$($setCookie.Name)=$($setCookie.Value)");
+		#$Context.Response.SetCookie($setCookie)
+		$context.Response.AddHeader("Set-Cookie", "$($setCookie.Name)=$($setCookie.Value)");
 		#$context.Response.AppendHeader("Set-Cookie", "name2=value2");
     }
 }
@@ -48,6 +83,8 @@ Function Clear-WebCookie {
 		[Parameter( Mandatory = $True )]
 		[string]$CookieID
     )
+
+    Write-Host " -> Clean cookie"
 
     If (($global:http) -and ($Context)) {
 	
@@ -66,45 +103,14 @@ Function Clear-WebCookie {
 		If ($cookieFound) {
 			[System.Net.Cookie]$setCookie = [System.Net.Cookie]::new()
 
-			# set cookie
+			# clear cookie (empty value)
 			$setCookie.Name = "$($CookieID)"
-			$setCookie.Value = ""  # empty value clears the cookie
-			$setCookie.Expires = (Get-Date).AddDays(1)
-			$setCookie.Secure = $true
+			$setCookie.Value = ""
+			$setCookie.Expires = (Get-Date).AddDays(-1)
 			$Context.Response.SetCookie($setCookie)
 		}
     }
 }
 $CommandsToExport += "Clear-WebCookie"
-
-
-#
-# Function : Get-WebCookie
-#
-Function Get-WebCookie {
-    Param (
-		[Parameter( Mandatory = $True )]
-        [System.Net.HttpListenerContext]$Context,
-		[Parameter( Mandatory = $True )]
-		[string]$CookieID
-    )
-
-    If (($global:http) -and ($Context)) {
-	
-		[System.Net.CookieCollection]$cookiesList = $context.Request.Cookies
-
-		If ($cookiesList) {
-			ForEach($getCookie in $cookiesList) {
-				If ($getCookie.Name.ToLowerInvariant() -eq $CookieID.ToLowerInvariant()) {
-					Return $getCookie
-				}
-			}                    
-		}		
-    }
-	
-	Return $null
-}
-$CommandsToExport += "Get-WebCookie"
-
 
 Export-ModuleMember -Function $CommandsToExport
