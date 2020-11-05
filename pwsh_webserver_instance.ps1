@@ -403,6 +403,12 @@ Function Main {
                 Continue
             }
 
+            # forms backend response (from Plugin Web.Postback)
+            # http://127.0.0.1/backend/someapppost'
+            If ($context.Request.HttpMethod -eq 'POST' -and $context.Request.RawUrl -eq '/backend/someapppost') {
+                Invoke-ProcessPostBack -Context $context
+                Continue
+            }  
 
             # Request root and other files
             # http://127.0.0.1/<filename>.<ext>
@@ -476,13 +482,7 @@ Function Main {
 
                 Continue
             }
-
-            # forms backend response (from Plugin Web.Postback)
-            # http://127.0.0.1/backend/someapppost'
-            If ($context.Request.HttpMethod -eq 'POST' -and $context.Request.RawUrl -eq '/backend/someapppost') {
-                Invoke-ProcessPostBack -Context $context
-                Continue
-            }   
+ 
 
             Write-Host ""
 
