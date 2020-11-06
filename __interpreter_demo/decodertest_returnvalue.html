@@ -1,12 +1,15 @@
 
-<!-- html native comment : correct working example, should execute the inline powershell code -->
-<!-- html comment should be outputted with rest of html code. The client browser should receive this -->
+<!-- correct working example, should execute the inline powershell code -->
 
 <?pwsh
-    // comment : write our fist line
-	Write-Host "Yup, first line works!"
+    <!-- some inline comment -->
+    ; some inline comment
+    # some inline comment
+    // some inline comment
+    Write-Host "Calculating something"
+	$calc = (2+2)
+    $calc
 pwsh>
-
 
 
 <!DOCTYPE html>
@@ -25,7 +28,6 @@ pwsh>
 <body>
 
 <?pwsh
-    ; comment : write Yipikaye like Bruce Willis
 	Write-Host "Yipikaye!"
     $arr = @("some val1", "some val2")
     ForEach($x in $arr) {
@@ -44,14 +46,6 @@ pwsh>
 	<br /><br />
 	<input type="submit" value="Submit">
 </form>
-
-<?pwsh
-    <!-- some inline comment -->
-    ; some inline comment
-    # some inline comment
-    // some inline comment
-    Write-Host "all possible comments tested!"
-pwsh>
 
 </body>
 </html>

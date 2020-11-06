@@ -20,66 +20,76 @@ Function Exec-PwshWebDecoder {
 
     If ($DataStream) {
         # decode the stream to UTF-8
-        $decoderBody = [System.Text.Encoding]::UTF8.GetString($DataStream);
+        [string]$decoderBody = [System.Text.Encoding]::UTF8.GetString($DataStream);
+        
+        [string]$decodedHTMLLines = [string]::Empty
 
         # check if we have somewhere in the body the word "pwsh"
         If ($decoderBody.ToLowerInvariant().Contains("pwsh")) {
             # we always need to have equal pwsh statement, otherwise the decoder will hang forever
             If ($([regex]::Matches($decoderBody, "pwsh" ).Count % 2) -eq 0) {
                 # split lines in string
-                $decoderBodyArray = $decoderBody.Split([Environment]::NewLine, [StringSplitOptions]::RemoveEmptyEntries)
+                $decoderBodyArray = @($decoderBody.Split([Environment]::NewLine, [StringSplitOptions]::RemoveEmptyEntries))
 
                 # create code block
                 [string]$decoderPwshStatements = [string]::Empty
-                [string]$decoderHTMLLines = [string]::Empty
+                
                 [bool]$decodingInProgress = $false
 
                 # decoder filters HTML from pwsh code statements
                 ForEach($decoderLine In $decoderBodyArray) {
-                    # end pwsh block and execute
-                    If ($decoderLine.Trim().ToLowerInvariant().Contains("pwsh>")) {
+                    [string]$decoderLineTrim = $decoderLine.Trim()
+
+                    # execute pwsh block and finish decoding
+                    If ($decoderLineTrim.ToLowerInvariant().Contains("pwsh>")) {
                         If (-not ([string]::IsNullOrEmpty($decoderPwshStatements))) {
                             Write-Host "---- EXECUTE PWSH ----" -ForegroundColor Red
                             $decoderScriptBlock = [Scriptblock]::Create($decoderPwshStatements)
-                            Invoke-Command -ScriptBlock $decoderScriptBlock
-                            $decoderScriptBlock = $null
-                            $decoderPwshStatements = [string]::Empty
-                            $decodingInProgress = $false
+                            [string]$pwshCodeResult = Invoke-Command -ScriptBlock $decoderScriptBlock
+                            $decodedHTMLLines += $($pwshCodeResult) + [Environment]::NewLine                            
                             Write-Host "---- EXECUTE PWSH ----" -ForegroundColor Red
                             Write-Host ""
                         }
+
+                        $decoderScriptBlock = $null
+                        $decoderPwshStatements = [string]::Empty
+                        $decodingInProgress = $false
 
                         Continue
                     }
 
                     # start a new pwsh block
-                    If($decoderLine.Trim().ToLowerInvariant().Contains("<?pwsh")) {
+                    If($decoderLineTrim.ToLowerInvariant().Contains("<?pwsh")) {
                         # the line can only start with "<?pwsh", and no other statements may be written on the line
-                        $decoderStartVerify = @($decoderLine.Trim().Split(" "))
+                        $decoderStartVerify = @($decoderLineTrim.Split(" "))
 
                         If ($decoderStartVerify.Count -eq 1) {
                             $decodingInProgress = $true
                         } Else {
                             Write-Host "---- BAD PWSH ----" -ForegroundColor Red
-                            Write-Host "Check code, found bad statement."
+                            Write-Host "Check your code : found a bad statement."
                             Write-Host "---- BAD PWSH ----" -ForegroundColor Red
                         }
             
-                        Continue    
+                        Continue
                     }
 
                     # add new pwsh statement for executioner or filter HTML lines
                     If ($decodingInProgress) {
-                        $decoderPwshStatements += $decoderLine + ";"
+                        # uncomment for debugging
+                        #Write-Host "DEBUG decoder $([char](34))$($decoderLineTrim)$([char](34))"
+                        
+                        # skip comments, otherwise add to queue for scriptblock
+                        If ( ($decoderLineTrim -notlike "<!--*") -and ($decoderLineTrim -notlike ";*") -and ($decoderLineTrim -notlike "#*") -and ($decoderLineTrim -notlike "//*")) {
+                            $decoderPwshStatements += $decoderLineTrim + ";"
+                        }
                     } else {
-                        $decoderHTMLLines += $decoderLine + [Environment]::NewLine
+                        $decodedHTMLLines += $decoderLine + [Environment]::NewLine
                     }
                 }
 
                 Write-Host ""
-                Write-Host "---- Decoded HTML code ----" -ForegroundColor Yellow
-                $decoderHTMLLines
-                Write-Host "---- Decoded HTML code ----" -ForegroundColor Yellow
+                
             } Else {
                 Write-Host "---- Decoder Failure! (uneven pwsh statements!) ----" -ForegroundColor Black -BackgroundColor Red
             }      
@@ -90,8 +100,12 @@ Function Exec-PwshWebDecoder {
             $decoderBody
             Write-Host "---- Plain HTML code (no pwsh detected) ----" -ForegroundColor Green
         }
-    }    
+    }
+
+
+    Return $decodedHTMLLines
 }
+
 
 
 
@@ -101,9 +115,10 @@ Function Exec-PwshWebDecoder {
 [string]$global:WorkFolder = $PSScriptRoot
 
 #[string]$pagetoload = $null
-#[string]$pagetoload = "$($global:WorkFolder)\decodertest.html"
+[string]$pagetoload = "$($global:WorkFolder)\decodertest.html"
+#[string]$pagetoload = "$($global:WorkFolder)\decodertest_returnvalue.html"
 #[string]$pagetoload = "$($global:WorkFolder)\decodertestbad1.html"
-[string]$pagetoload = "$($global:WorkFolder)\decodertestbad2.html"
+#[string]$pagetoload = "$($global:WorkFolder)\decodertestbad2.html"
 #[string]$pagetoload = "$($global:WorkFolder)\decodertestnocode.html"
 
 Write-Host ""
@@ -114,7 +129,12 @@ If (Test-Path -Path "$($pagetoload)") {
     # read file as stream
     $buffer = [System.IO.File]::ReadAllBytes($pagetoload)
 
-    Exec-PwshWebDecoder -DataStream $buffer
+    [string]$HTML = Exec-PwshWebDecoder -DataStream $buffer
+
+
+    Write-Host "---- Result HTML code ----" -ForegroundColor Yellow
+    $HTML
+    Write-Host "---- Result HTML code ----" -ForegroundColor Yellow
 } Else {
     Write-Warning "failure loading file!"
 }
