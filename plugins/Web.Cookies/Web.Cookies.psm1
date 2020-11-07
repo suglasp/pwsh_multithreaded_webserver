@@ -4,7 +4,7 @@
 # Webserver Cookies Plugin
 #
 # Created : 04/11/2020
-# Updated : 05/11/2020
+# Updated : 07/11/2020
 #
 
 $CommandsToExport = @()
@@ -21,7 +21,7 @@ Function Get-WebCookie {
 		[string]$CookieSearchID
     )
 
-    Write-Host " -> Get cookie"
+	Write-Log -LogMsg " -> Get cookie" -LogFile $global:WebLogFile
 
     [System.Net.Cookie]$foundCookie = $null
 
@@ -31,7 +31,7 @@ Function Get-WebCookie {
 		If ($cookiesList) {
 			ForEach($getCookie In $cookiesList) {
 				If ($getCookie.Name.ToLowerInvariant().Equals($CookieSearchID.ToLowerInvariant())) {
-                    Write-Host "    found."
+                    Write-Log -LogMsg "    found." -LogFile $global:WebLogFile
 					$foundCookie = $getCookie
 				}
 			}
@@ -55,7 +55,7 @@ Function Set-WebCookie {
 		[string]$CookieValue
     )
 
-    Write-Host " -> Set cookie"
+	Write-Log -LogMsg " -> Set cookie" -LogFile $global:WebLogFile
 
     If (($global:http) -and ($Context)) {
         [System.Net.Cookie]$setCookie = [System.Net.Cookie]::new()
@@ -84,7 +84,7 @@ Function Clear-WebCookie {
 		[string]$CookieID
     )
 
-    Write-Host " -> Clean cookie"
+	Write-Log -LogMsg " -> Clean cookie" -LogFile $global:WebLogFile
 
     If (($global:http) -and ($Context)) {
 	

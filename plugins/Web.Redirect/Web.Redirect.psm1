@@ -4,7 +4,7 @@
 # Webserver Redirect Plugin
 #
 # Created : 05/11/2020
-# Updated : 05/11/2020
+# Updated : 07/11/2020
 #
 
 $CommandsToExport = @()
@@ -23,9 +23,9 @@ Function Start-WebRedirect {
     If (($global:http) -and ($Context)) {
         If (-not ([string]::IsNullOrEmpty($RelativeUrl))) {
             # redirect client to other Url
-            Write-Host " -> Redirecting client to $($RelativeUrl)."
+            Write-Log -LogMsg " -> Redirecting client to $($RelativeUrl)." -LogFile $global:WebLogFile
             $context.Response.Redirect($RelativeUrl)
-            $context.Response.Close()
+            #$context.Response.Close()
         } Else {
             # woops, 404                
             $context.Response.StatusCode = [int32][System.Net.HttpStatusCode]::NotFound

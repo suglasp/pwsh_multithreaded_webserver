@@ -4,7 +4,7 @@
 # Webserver plugin to test Form postback input named as "someapp"
 #
 # Created : 02/11/2020
-# Updated : 05/11/2020
+# Updated : 07/11/2020
 #
 
 $CommandsToExport = @()
@@ -24,7 +24,7 @@ Function Invoke-ProcessPostBack {
         # decode the form post
         $FormContent = [System.IO.StreamReader]::new($Context.Request.InputStream).ReadToEnd()
 
-        Write-Host "Content : $($FormContent)"
+		Write-Log -LogMsg "Content : $($FormContent)" -LogFile $global:WebLogFile
 
         # get postback data from URL
         $data = @{}
