@@ -4,7 +4,7 @@
 # Powershell webserver single instance
 #
 # created : 01/11/2020
-# changed : 05/11/2020
+# changed : 07/11/2020
 #
 # Only tested on Windows 10 and Server 2019 with Poweshell 5.1 and Powershell 7.0.3.
 # This script is written with cross platform in mind.
@@ -16,11 +16,14 @@
 [string]$global:ContentFolder = "$($global:WorkFolder)\content"
 [string]$global:WebPluginsPath = "$($global:WorkFolder)\plugins"
 [string]$global:WebLogsPath = "$($global:WorkFolder)\logs"
+[string]$global:WebLogFile = "$($global:WebLogsPath)\$([environment]::GetEnvironmentVariable("COMPUTERNAME").ToLowerInvariant())_$($global:port).log"
 [UInt32]$global:Port = 8080
 [UInt32]$global:ExitCode = 0
 [System.Net.HttpListener]$global:Http = [System.Net.HttpListener]::new()
 [bool]$global:PublishLocalhost = $true
+[bool]$global:DebugVerbose = $true
 [bool]$global:DebugExtraVerbose = $false
+[bool]$global:DebugTransscriptLogging = $false
 [string]$global:IndexPage = "index.html"
 #endregion
 
@@ -61,22 +64,22 @@ Function Start-Webserver {
 
             # Log ready message to terminal 
             If ($global:Http.IsListening) {
-                Write-Host "[!] HTTP Server is hosting"
+                Write-Log -LogMsg "[!] HTTP Server is hosting" -LogFile $global:WebLogFile
                 ForEach($ServerURLPrefix in $ServerUrlPrefixes) {
-                    Write-Host " -> Serving URL http://$($ServerURLPrefix):$($ServerPort)/"
+                    Write-Log -LogMsg " -> Serving URL http://$($ServerURLPrefix):$($ServerPort)/" -LogFile $global:WebLogFile
                 }
 
                 # allow Windows firewall rule
                 New-NetFirewallRule -DisplayName "webserver_$($global:Port)" -Profile @('Domain', 'Private', 'Public') -Direction Inbound -Action Allow -Protocol TCP -LocalPort @($global:Port) -ErrorAction SilentlyContinue
             } Else {
-                Write-Host "[!] HTTP Server has soft failed"
+                Write-Log -LogMsg "[!] HTTP Server has soft failed" -LogFile $global:WebLogFile
                 #$global:Http.Close()
                 $global:Http.Stop()
                 
                 Exit-Bailout
             }
         } catch [System.Net.HttpListenerException] {
-            Write-Host "[!] HTTP Server has hard failed"
+            Write-Log -LogMsg "[!] HTTP Server has hard failed" -LogFile $global:WebLogFile
         }
     }
 }
@@ -137,8 +140,8 @@ Function Exit-Bailout {
 # Function : DynamicLoad-WebPlugins
 #
 Function DynamicLoad-WebPlugins {
-    Write-Host ""
-    Write-Host "Preparing plugins..."
+    Write-Log -LogMsg "" -LogFile $global:WebLogFile
+    Write-Log -LogMsg "Preparing plugins..." -LogFile $global:WebLogFile
 
     # set Webserver plugin Path
     If (-not ($env:PSModulePath.Contains($global:WebPluginsPath))) {
@@ -150,41 +153,41 @@ Function DynamicLoad-WebPlugins {
     }
 
     # dynamic load webserver plugins
-    $pluginsList = @(Get-Module -ListAvailable)
+    [system.Array]$pluginsList = @(Get-Module -ListAvailable)
 
     ForEach($plugin in $pluginsList) {
         If ($plugin.ModuleBase.Contains($global:WebPluginsPath)) {
             # If not already loaded, do load it!
             If (-not (Get-Module -Name $($plugin.Name))) {
-                Write-Host "[!] Loading plugin : $($plugin.Name)"
+                Write-Log -LogMsg "[!] Loading plugin : $($plugin.Name)" -LogFile $global:WebLogFile
                 Import-Module -Name $($plugin.Name) -Scope Local -DisableNameChecking
             } Else {
-                Write-Host "[i] Plugin already present : $($plugin.Name) (some plugins have a dependency and are auto loaded)"
+                Write-Log -LogMsg "[i] Plugin already present : $($plugin.Name) (some plugins have a dependency and are auto loaded)" -LogFile $global:WebLogFile
             }
         }
     }
 
-    Write-Host ""
+    Write-Log -LogMsg "" -LogFile $global:WebLogFile
 }
 
 #
 # Function : DynamicUnload-WebPlugins
 #
 Function DynamicUnload-WebPlugins {
-    Write-Host ""
-    Write-Host "Unloading plugins..."
+    Write-Log -LogMsg "" -LogFile $global:WebLogFile
+    Write-Log -LogMsg "Unloading plugins..." -LogFile $global:WebLogFile
 
     # dynamic unload webserver plugins
-    $pluginsListLoaded = @(Get-Module)
+    [system.Array]$pluginsListLoaded = @(Get-Module)
 
     ForEach($plugin in $pluginsListLoaded) {
         If ($plugin.ModuleBase.Contains($global:WebPluginsPath)) {
-            Write-Host "[!] Unloading plugin : $($plugin.Name)"
+            Write-Log -LogMsg "[!] Unloading plugin : $($plugin.Name)" -LogFile $global:WebLogFile
             Remove-Module -Name $($plugin.Name) -Force
         }
     }
 
-    Write-Host ""
+    Write-Log -LogMsg "" -LogFile $global:WebLogFile
 }
 
 #
@@ -192,14 +195,17 @@ Function DynamicUnload-WebPlugins {
 #
 Function Start-LocalLogging
 {
-    # create logs path if not exists
-    If (-Not (Test-Path -Path $global:WebLogsPath)) {
-        New-Item -Name $global:WebLogsPath -ItemType Directory
-    }
+    # only start transscript logging of the flag DebugTransscriptLogging is set
+    If ($global:DebugTransscriptLogging) {
+        # create logs path if not exists
+        If (-Not (Test-Path -Path $global:WebLogsPath)) {
+            New-Item -Name $global:WebLogsPath -ItemType Directory
+        }
 
-    # try enable logging output
-    If (Test-Path -Path $global:WebLogsPath) {
-        Start-Transcript -OutputDirectory $global:WebLogsPath | Out-Null
+        # try enable logging output
+        If (Test-Path -Path $global:WebLogsPath) {
+            Start-Transcript -OutputDirectory $global:WebLogsPath | Out-Null
+        }
     }
 }
 
@@ -208,11 +214,153 @@ Function Start-LocalLogging
 #
 Function Stop-LocalLogging
 {
-    If (Test-Path -Path $global:WebLogsPath) {
-        Stop-Transcript
+    # only stop transscript logging of the flag DebugTransscriptLogging is set
+    If ($global:DebugTransscriptLogging) {
+        If (Test-Path -Path $global:WebLogsPath) {
+            Stop-Transcript
+        }
+    }
+}
+
+#
+# Function : Write-Log
+#
+Function Write-Log
+{
+    Param (
+        [string]$LogMsg,
+        [Parameter( Mandatory = $True )]
+        [string]$LogFile
+    )
+    	    
+    $LogMsgStamped = "[$([environment]::GetEnvironmentVariable("COMPUTERNAME").ToLowerInvariant())_$($global:port)] $((Get-Date).ToString("[dd/MM/yyyy HH:mm:ss]")) $LogMsg"
+    If ($global:DebugVerbose) {
+        Write-Host $LogMsgStamped
+    }
+
+    Add-content $LogFile -value $LogMsgStamped -Force
+    #$LogMsgStamped >> $LogFile
+}
+
+Function Print-Title {
+    Write-Log -LogMsg "" -LogFile $global:WebLogFile
+    Write-Log -LogMsg "------------------------------------------" -LogFile $global:WebLogFile
+    Write-Log -LogMsg "Powershell Web Server Instance" -LogFile $global:WebLogFile
+    Write-Log -LogMsg "------------------------------------------" -LogFile $global:WebLogFile
+    Write-Log -LogMsg "" -LogFile $global:WebLogFile
+
+    # output working folder and flags
+    Write-Log -LogMsg "Workdir : $($global:WorkFolder)" -LogFile $global:WebLogFile
+    Write-Log -LogMsg "Verbose (stdout) : $($global:DebugVerbose.ToString())" -LogFile $global:WebLogFile
+    Write-Log -LogMsg "Extra Verbose    : $($global:DebugExtraVerbose.ToString())" -LogFile $global:WebLogFile
+    Write-Log -LogMsg "Transscript logs : $($global:DebugTransscriptLogging.ToString())" -LogFile $global:WebLogFile
+    Write-Log -LogMsg "" -LogFile $global:WebLogFile
+
+    If ($global:DebugVerbose) {
+        Write-Log -LogMsg "[i] For performance, disable stdout output by setting DebugVerbose to $false." -LogFile $global:WebLogFile
+        Write-Log -LogMsg "" -LogFile $global:WebLogFile
     }
 }
 #endregion
+
+
+#region Interpreter Function
+#
+# Function : Exec-PwshWebDecoder
+#
+Function Exec-PwshWebDecoder {
+    Param (
+        [Parameter( Mandatory = $True )]
+        [byte[]]$DataStream
+    )
+
+    If ($DataStream) {
+        # decode the stream to UTF-8
+        [string]$decoderBody = [System.Text.Encoding]::UTF8.GetString($DataStream);
+        
+        [string]$decodedHTMLLines = [string]::Empty
+
+        # check if we have somewhere in the body the word "pwsh"
+        If ($decoderBody.ToLowerInvariant().Contains("?pwsh")) {
+            # we always need to have equal pwsh statement, otherwise the decoder will hang forever
+            If ($([regex]::Matches($decoderBody, "pwsh" ).Count % 2) -eq 0) {
+                # split lines in string
+                $decoderBodyArray = @($decoderBody.Split([Environment]::NewLine, [StringSplitOptions]::RemoveEmptyEntries))
+
+                # create code block
+                [string]$decoderPwshStatements = [string]::Empty
+                
+                [bool]$decodingInProgress = $false
+
+                # decoder filters HTML from pwsh code statements
+                ForEach($decoderLine In $decoderBodyArray) {
+                    [string]$decoderLineTrim = $decoderLine.Trim()
+
+                    # execute pwsh block and finish decoding
+                    If ($decoderLineTrim.ToLowerInvariant().Contains("pwsh>")) {
+                        If (-not ([string]::IsNullOrEmpty($decoderPwshStatements))) {
+                            Write-Log -LogMsg "---- EXECUTE PWSH ----" -LogFile $global:WebLogFile
+                            $decoderScriptBlock = [Scriptblock]::Create($decoderPwshStatements)
+                            [string]$pwshCodeResult = Invoke-Command -ScriptBlock $decoderScriptBlock
+                            $decodedHTMLLines += $($pwshCodeResult) + [Environment]::NewLine                            
+                            Write-Log -LogMsg "---- EXECUTE PWSH ----" -LogFile $global:WebLogFile
+                            Write-Log -LogMsg "" -LogFile $global:WebLogFile
+                        }
+
+                        $decoderScriptBlock = $null
+                        $decoderPwshStatements = [string]::Empty
+                        $decodingInProgress = $false
+
+                        Continue
+                    }
+
+                    # start a new pwsh block
+                    If($decoderLineTrim.ToLowerInvariant().Contains("<?pwsh")) {
+                        # the line can only start with "<?pwsh", and no other statements may be written on the line
+                        $decoderStartVerify = @($decoderLineTrim.Split(" "))
+
+                        If ($decoderStartVerify.Count -eq 1) {
+                            $decodingInProgress = $true
+                        } Else {
+                            Write-Log -LogMsg "---- BAD PWSH ----" -LogFile $global:WebLogFile
+                            Write-Log -LogMsg "Check your code : found a bad statement." -LogFile $global:WebLogFile
+                            Write-Log -LogMsg "---- BAD PWSH ----" -LogFile $global:WebLogFile
+                        }
+            
+                        Continue
+                    }
+
+                    # add new pwsh statement for executioner or filter HTML lines
+                    If ($decodingInProgress) {
+                        # uncomment for debugging
+                        #Write-Log -LogMsg "DEBUG decoder $([char](34))$($decoderLineTrim)$([char](34))"
+                        
+                        # skip comments, otherwise add to queue for scriptblock
+                        If ( ($decoderLineTrim -notlike "<!--*") -and ($decoderLineTrim -notlike ";*") -and ($decoderLineTrim -notlike "#*") -and ($decoderLineTrim -notlike "//*")) {
+                            $decoderPwshStatements += $decoderLineTrim + ";"
+                        }
+                    } else {
+                        $decodedHTMLLines += $decoderLine + [Environment]::NewLine
+                    }
+                }
+
+                Write-Log -LogMsg "" -LogFile $global:WebLogFile
+                
+            } Else {
+                # Decoder Failure! (uneven pwsh statements!)
+                $decodedHTMLLines = "<!DOCTYPE html>$([Environment]::NewLine)<html>$([Environment]::NewLine)<title>Error in code</title>$([Environment]::NewLine)<body>$([Environment]::NewLine)Missing begin or end pwsh tag.$([Environment]::NewLine)</body>$([Environment]::NewLine)</html>"
+            }        
+        } Else {
+            # output Plain HTML code (no pwsh detected)
+            $decodedHTMLLines = $decoderBody
+        }
+    }
+
+
+    Return $decodedHTMLLines
+}
+#endregion
+
 
 
 #region Main function
@@ -227,11 +375,8 @@ Function Main {
     # clear screen if needed
     Clear-Host
 
-    # enable logging
-    Start-LocalLogging
-
-    # output working folder
-    Write-Host "Workdir : $($global:WorkFolder)"
+    # enable transscript logging
+    Start-LocalLogging  
 
     # extract custom port if requested
     If ($Arguments) {
@@ -241,11 +386,15 @@ Function Main {
                 "-port" {                
                     If (($i +1) -le $Arguments.Length) {
                         $global:Port = $Arguments[$i +1]
+                        $global:WebLogFile = "$($global:WebLogsPath)\$([environment]::GetEnvironmentVariable("COMPUTERNAME").ToLowerInvariant())_$($global:port).log"
                     }
                 }
             }
         }
     }
+
+    # print startup title
+    Print-Title
 
     # try starting the http webserver
     If ($global:PublishLocalhost) {
@@ -316,26 +465,26 @@ Function Main {
             [string]$requestTimeStamp = $(Get-Date).ToString("dd-MM-yyyy@HH:mm:ss")
 
             # write out we have incoming a request
-            Write-Host ""
-            Write-Host "** [$($requestTimeStamp)] Request : $($context.Request.UserHostAddress)  =>  $($context.Request.Url)"
-            Write-Host "   -> Page : $($context.Request.Url.AbsolutePath)"
-            Write-Host ""
+            Write-Log -LogMsg "" -LogFile $global:WebLogFile
+            Write-Log -LogMsg "** [$($requestTimeStamp)] Request : $($context.Request.UserHostAddress)  =>  $($context.Request.Url)" -LogFile $global:WebLogFile
+            Write-Log -LogMsg "   -> Page : $($context.Request.Url.AbsolutePath)" -LogFile $global:WebLogFile
+            Write-Log -LogMsg "" -LogFile $global:WebLogFile
 
             # extra verbose for troubleshooting or debugging
             If ($global:DebugExtraVerbose) {
-                Write-Host "-- VERBOSE --"
-                Write-Host "AbsUri      : $($context.Request.Url.AbsoluteUri)"
-                Write-Host "RawUrl Path : $($context.Request.RawUrl)"
-                Write-Host "Abs Path    : $($context.Request.Url.AbsolutePath)"
-                Write-Host "Local Path  : $($context.Request.Url.LocalPath)"
-                Write-Host "Referral : $($context.Request.UrlReferrer)"
-                Write-Host "-- VERBOSE --"
+                Write-Log -LogMsg "-- VERBOSE --" -LogFile $global:WebLogFile
+                Write-Log -LogMsg "AbsUri      : $($context.Request.Url.AbsoluteUri)" -LogFile $global:WebLogFile
+                Write-Log -LogMsg "RawUrl Path : $($context.Request.RawUrl)" -LogFile $global:WebLogFile
+                Write-Log -LogMsg "Abs Path    : $($context.Request.Url.AbsolutePath)" -LogFile $global:WebLogFile
+                Write-Log -LogMsg "Local Path  : $($context.Request.Url.LocalPath)" -LogFile $global:WebLogFile
+                Write-Log -LogMsg "Referral : $($context.Request.UrlReferrer)" -LogFile $global:WebLogFile
+                Write-Log -LogMsg "-- VERBOSE --" -LogFile $global:WebLogFile
             }
 
             # kill webserver
             # http://127.0.0.1/kill'
             If ($context.Request.HttpMethod -eq 'GET' -and $context.Request.RawUrl -eq '/kill') {
-                Write-Host "[!] HTTP Server going down!"
+                Write-Log -LogMsg "[!] HTTP Server going down!" -LogFile $global:WebLogFile
                 $context.Response.StatusCode = [int32][System.Net.HttpStatusCode]::GatewayTimeout
                 $context.Response.StatusDescription = "Gateway timeout"
                 $context.Response.Close()
@@ -348,7 +497,7 @@ Function Main {
             # webserver ping
             # http://127.0.0.1/ping'
             If ($context.Request.HttpMethod -eq 'GET' -and $context.Request.RawUrl -eq '/ping') {
-                Write-Host "[!] Webserver Ping, sending pong"
+                Write-Log -LogMsg "[!] Webserver Ping, sending pong" -LogFile $global:WebLogFile
                 [string]$pingResponse = "<html><head><title>ping</title><body>Received Ping. Return Pong.</body></html>"
 
                 #resposed to the request
@@ -367,16 +516,16 @@ Function Main {
             # webserver cookie
             # http://127.0.0.1/cookie'
             If ($context.Request.HttpMethod -eq 'GET' -and $context.Request.RawUrl -eq '/cookie') {
-                Write-Host "[!] Webserver cookie"
+                Write-Log -LogMsg "[!] Webserver cookie" -LogFile $global:WebLogFile
                 [string]$cookieResponse = "<html><head><title>cookie</title><body>Cookies!</body></html>"
 
                 # ---- read cookie(s)
                 [System.Net.Cookie]$getCookie = Get-WebCookie -Context $context -CookieSearchID "ID"
 
                 If ($getCookie) {
-                    Write-Host "Found cookie : $($getCookie.Name) = $($getCookie.Value)"
+                    Write-Log -LogMsg "Found cookie : $($getCookie.Name) = $($getCookie.Value)" -LogFile $global:WebLogFile
                 } Else {
-                    Write-Host "No cookie found with name $([char](34))ID$([char](34))"
+                    Write-Log -LogMsg "No cookie found with name $([char](34))ID$([char](34))" -LogFile $global:WebLogFile
                 }
                 # ---- read cookie(s)
 
@@ -403,12 +552,27 @@ Function Main {
                 Continue
             }
 
+            
             # forms backend response (from Plugin Web.Postback)
             # http://127.0.0.1/backend/someapppost'
             If ($context.Request.HttpMethod -eq 'POST' -and $context.Request.RawUrl -eq '/backend/someapppost') {
                 Invoke-ProcessPostBack -Context $context
                 Continue
-            }  
+            }   
+            
+            # forms backend response (from Plugin Web.Logon)
+            # http://127.0.0.1/backend/logon'
+            If ($context.Request.HttpMethod -eq 'POST' -and $context.Request.RawUrl -eq '/backend/logon') {
+                Validate-Logon -Context $context
+                Continue
+            } 
+
+            # forms backend response (from Plugin Web.Logon)
+            # http://127.0.0.1/backend/logon'
+            If ($context.Request.HttpMethod -eq 'GET' -and $context.Request.RawUrl -eq '/backend/logonoff') {
+                Remove-Logon -Context $context
+                Continue
+            }
 
             # Request root and other files
             # http://127.0.0.1/<filename>.<ext>
@@ -430,32 +594,38 @@ Function Main {
                         Continue
                     }
                 }
- 
+
+
                 # build local path for serving.
                 # Replace forward slash with back slash on Windows. On Linux it will stay the same.
                 [string]$pagetoload = "$($global:ContentFolder)$($requestedFilename.Replace("/", [IO.Path]::DirectorySeparatorChar))"
                 
                 If (-not([string]::IsNullOrEmpty($pagetoload)) -and ($pagetoload.Contains('.'))) {
-                    Write-Host "requested Filename : $($requestedFilename)"
-                    Write-Host "Page to load : $($pagetoload)"
+                    Write-Log -LogMsg "requested Filename : $($requestedFilename)" -LogFile $global:WebLogFile
+                    Write-Log -LogMsg "Page to load : $($pagetoload)" -LogFile $global:WebLogFile
 
                     If (Test-Path -Path $pagetoload) {
                         #[string]$somefile = Get-Content -Path $pagetoload -Raw
                         #$buffer = [System.Text.Encoding]::UTF8.GetBytes($somefile)
 
-                        $buffer = [System.IO.File]::ReadAllBytes($pagetoload)
-                        $requestedFilename
-                        Switch -wildcard ($requestedFilename) {
-                            "*.htm" { $context.Response.Headers.Add("Content-Type","text/html") }
-                            "*.html" { $context.Response.Headers.Add("Content-Type","text/html") }
+                        $streamBuffer = [System.IO.File]::ReadAllBytes($pagetoload)
+
+                        [bool]$bNeedInterpreter = $false
+
+                        Switch -wildcard ($requestedFilename.ToLowerInvariant()) {
+                            "*.htm?" { 
+                                $context.Response.Headers.Add("Content-Type","text/html")
+                                $bNeedInterpreter = $true
+                            }
+                            #"*.html" { $context.Response.Headers.Add("Content-Type","text/html") }                         
                             "*.css" { $context.Response.Headers.Add("Content-Type","text/css") }
                             "*.csv" { $context.Response.Headers.Add("Content-Type","text/csv") }
                             "*.txt" { $context.Response.Headers.Add("Content-Type","text/plain") }
                             "*.xml" { $context.Response.Headers.Add("Content-Type","text/xml") }
                             "*.js" { $context.Response.Headers.Add("Content-Type","text/javascript") }
                             "*.ico" { $context.Response.Headers.Add("Content-Type","image/vnd.microsoft.icon") }
-                            "*.jpg" { $context.Response.Headers.Add("Content-Type","image/jpeg") }
-                            "*.jpeg" { $context.Response.Headers.Add("Content-Type","image/jpeg") }
+                            #"*.jpg" { $context.Response.Headers.Add("Content-Type","image/jpeg") }
+                            "*.jp?g" { $context.Response.Headers.Add("Content-Type","image/jpeg") }
                             "*.png" { $context.Response.Headers.Add("Content-Type","image/png") }
                             "*.bmp" { $context.Response.Headers.Add("Content-Type","image/bmp") }
                             "*.gif" { $context.Response.Headers.Add("Content-Type","image/gif") }
@@ -468,10 +638,23 @@ Function Main {
                             Default { $context.Response.Headers.Add("Content-Type","application/octet-stream") }                            
                         }
             
-                        #$Context.Response.ContentType = [System.Web.MimeMapping]::GetMimeMapping($pagetoload)
-                        $context.Response.ContentLength64 = $buffer.Length
-                        $context.Response.OutputStream.Write($buffer, 0, $buffer.Length) 
-                        $context.Response.OutputStream.Close()
+                        # our HTML inline interpreter
+                        If ($bNeedInterpreter) {                                
+                            [string]$strippedHTML = Exec-PwshWebDecoder -DataStream $streamBuffer
+                            
+                            # overwrite buffer if needed with stripped out pwsh blocks, keeping only plain html code
+                            If (-not ([string]::IsNullOrEmpty($strippedHTML))) {
+                                $streamBuffer = [System.Text.Encoding]::UTF8.GetBytes($strippedHTML)
+                            }
+                        }
+
+                        # output streamBuffer (html code in a bytes stream) if not empty
+                        If ($streamBuffer) {
+                            #$Context.Response.ContentType = [System.Web.MimeMapping]::GetMimeMapping($pagetoload)
+                            $context.Response.ContentLength64 = $streamBuffer.Length
+                            $context.Response.OutputStream.Write($streamBuffer, 0, $streamBuffer.Length) 
+                            $context.Response.OutputStream.Close()
+                        }
                     } Else {
                         # woops, 404                
                         $context.Response.StatusCode = [int32][System.Net.HttpStatusCode]::NotFound
@@ -482,16 +665,16 @@ Function Main {
 
                 Continue
             }
- 
 
-            Write-Host ""
+
+            Write-Log -LogMsg "" -LogFile $global:WebLogFile
 
             # Do not stop debugging in ISE or Powershell with VSCode
             # better redirect to http://localhost:<webserver_port>/kill" for clean shutdown
 
         }        
     } else {
-        Write-Host "[!] Http server failed!?" -ForegroundColor "Red"
+        Write-Log -LogMsg "[!] Http server failed!?" -LogFile $global:WebLogFile
     }
 
     # exit Gracefully

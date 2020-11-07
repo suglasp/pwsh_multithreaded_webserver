@@ -87,6 +87,12 @@ Otherwise, you can just run it normally if it's for testing and running on port 
 - Web.Cookies : plugin to handle session cookies
 - Web.PostbackSomeApp : basic plugin sample for form postback processing (someapp example)
 - Web.Redirect : plugin to redirect server side to other page
+- Web.Logon : basic plugin sample to emulate a logon page (also uses the pwsh interpreter tags)
+
+
+**pwsh interpreter**
+There is a build-in small interpreter, so you can insert pwsh tags in your html code for processing.
+Works a bit like in php style interpreter code.
 
 
 **Examples included**

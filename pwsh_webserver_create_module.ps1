@@ -4,7 +4,7 @@
 # Create a new webserver plugin (Powershell Module).
 #
 # created : 02/11/2020
-# changed : 04/11/2020
+# changed : 07/11/2020
 #
 
 # global vars
@@ -43,7 +43,7 @@ If (-Not (Test-Path "$($global:WebPluginsPath)\$($NewPluginName)")) {
     $params = @{
         Path = $manifestFilename
         RootModule = $(Split-Path $moduleFilename -Leaf)
-        ModuleVersion = '1.0.0'
+        ModuleVersion = '1.0.0.0'
         Guid = $guid
         Author = $($NewPluginAuthor)
         Description = $($NewPluginDesc)
@@ -55,22 +55,30 @@ If (-Not (Test-Path "$($global:WebPluginsPath)\$($NewPluginName)")) {
     New-Item -Path $moduleFilename -ItemType File
 
     # add some content already
-    Add-Content -Path $moduleFilename -Value ''
-    Add-Content -Path $moduleFilename -Value '# My Webserver plugin'
-    Add-Content -Path $moduleFilename -Value ''
+    [string]$timeStampCreated = $(Get-Date).ToString("dd/MM/yyyy")
+
+    Add-Content -Path $moduleFilename -Value ""
+    Add-Content -Path $moduleFilename -Value "#"
+    Add-Content -Path $moduleFilename -Value "# $($NewPluginAuthor)"
+    Add-Content -Path $moduleFilename -Value "# $($NewPluginDesc)"
+    Add-Content -Path $moduleFilename -Value "#"
+    Add-Content -Path $moduleFilename -Value "# created : $($timeStampCreated)"
+    Add-Content -Path $moduleFilename -Value "# changed : $($timeStampCreated)"
+    Add-Content -Path $moduleFilename -Value "#"
+    Add-Content -Path $moduleFilename -Value ""
     Add-Content -Path $moduleFilename -Value '$CommandsToExport = @()'
-    Add-Content -Path $moduleFilename -Value ''
-    Add-Content -Path $moduleFilename -Value '#'
-    Add-Content -Path $moduleFilename -Value '# Function : Invoke-HelloWorld'
-    Add-Content -Path $moduleFilename -Value '#'
-    Add-Content -Path $moduleFilename -Value 'Function Invoke-HelloWorld {'
+    Add-Content -Path $moduleFilename -Value ""
+    Add-Content -Path $moduleFilename -Value "#"
+    Add-Content -Path $moduleFilename -Value "# Function : Invoke-HelloWorld"
+    Add-Content -Path $moduleFilename -Value "#"
+    Add-Content -Path $moduleFilename -Value "Function Invoke-HelloWorld {"
     Add-Content -Path $moduleFilename -Value '  Write-Output "Hello"'
-    Add-Content -Path $moduleFilename -Value '}'
+    Add-Content -Path $moduleFilename -Value "}"
     Add-Content -Path $moduleFilename -Value '$CommandsToExport += "Invoke-HelloWorld"'
-    Add-Content -Path $moduleFilename -Value ''
-    Add-Content -Path $moduleFilename -Value ''
+    Add-Content -Path $moduleFilename -Value ""
+    Add-Content -Path $moduleFilename -Value ""
     Add-Content -Path $moduleFilename -Value 'Export-ModuleMember -Function $CommandsToExport'
-    Add-Content -Path $moduleFilename -Value ''
+    Add-Content -Path $moduleFilename -Value ""
 
     Write-Host "Webserver Plugin has been created!"
 } else {
