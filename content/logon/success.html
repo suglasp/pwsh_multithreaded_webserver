@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+
+  <title>A Powershell Webserver</title>
+  <meta name="description" content="A Powershell Webserver">
+  <meta name="author" content="Suglasp">
+  
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+<?pwsh
+	Approve-Logon -Context $context
+pwsh>
+
+	<h1>Yay, Logon Success!</h1>
+	
+	<p>
+	<a href="/logon" target="_self">Go to logon page, it should redirect directly to here.</a><br />
+	<a href="/backend/logonoff" target="_self">Logoff.</a><br />
+	</p>
+</body>
+</html>
