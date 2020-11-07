@@ -6,7 +6,7 @@
 # The output is html code (to return to browser)
 #
 # Created : 06/11/2020
-# Updated : 06/11/2020
+# Updated : 07/11/2020
 #
 
 #
@@ -25,7 +25,7 @@ Function Exec-PwshWebDecoder {
         [string]$decodedHTMLLines = [string]::Empty
 
         # check if we have somewhere in the body the word "pwsh"
-        If ($decoderBody.ToLowerInvariant().Contains("pwsh")) {
+        If ($decoderBody.ToLowerInvariant().Contains("?pwsh")) {
             # we always need to have equal pwsh statement, otherwise the decoder will hang forever
             If ($([regex]::Matches($decoderBody, "pwsh" ).Count % 2) -eq 0) {
                 # split lines in string
