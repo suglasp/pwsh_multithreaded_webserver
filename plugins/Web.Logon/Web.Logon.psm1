@@ -4,7 +4,7 @@
 # Webserver very basic plugin to emulate logon form
 #
 # Created : 05/11/2020
-# Updated : 07/11/2020
+# Updated : 08/11/2020
 #
 # Notice: This module has RequiredModules set in Web.Logon.psd1.
 # This module has a requirement for Web.Redirect and Web.Cookies.
@@ -49,14 +49,22 @@ Function Validate-Logon {
                 # provided password must check local username that logged on to OS
                 If ($password.ToLowerInvariant().Equals([environment]::GetEnvironmentVariable("USERNAME").ToLowerInvariant())) {
                     Set-WebCookie -Context $Context -CookieID "pwshlogonid" -CookieValue "$([Environment]::GetEnvironmentVariable("USERNAME"))"
-                    Start-WebRedirect -Context $Context -RelativeUrl "/logon/success.html"
+                    Start-WebRedirect -Context $Context -RelativeUrl "/logon/success.html" -CloseResponse
                 } Else {
-                    Start-WebRedirect -Context $Context -RelativeUrl "/logon/failed.html"
+                    #Start-WebRedirect -Context $Context -RelativeUrl "/logon/failed.html" -CloseResponse
+                    
+                    [string]$html = "<html><head><title>failed</title><h1>A Powershell Webserver</h1><p>Logon failed</p></body></html>"
+                    Send-WebHtmlResponse -Context $Context -HtmlStream $html
                 }
             } Else {
-                Start-WebRedirect -Context $Context -RelativeUrl "/logon/failed.html"
+                #Start-WebRedirect -Context $Context -RelativeUrl "/logon/failed.html" -CloseResponse
+                [string]$html = "<html><head><title>failed</title><h1>A Powershell Webserver</h1><p>Logon failed</p></body></html>"
+                Send-WebHtmlResponse -Context $Context -HtmlStream $html
             }
        }
+    } Else {
+        # woops, 501
+        Send-WebResponseCode501
     }
 }
 $CommandsToExport += "Validate-Logon"
@@ -77,6 +85,9 @@ Function Approve-Logon {
        If (-not ($logonCookie)) {
            Start-WebRedirect -Context $Context -RelativeUrl "/logon/logon.html"
        }
+    } Else {
+        # woops, 501
+        Send-WebResponseCode501
     }
 }
 $CommandsToExport += "Approve-Logon"
@@ -98,6 +109,9 @@ Function Remove-Logon {
            Clear-WebCookie -Context $Context -CookieID "pwshlogonid"
            Start-WebRedirect -Context $Context -RelativeUrl "/logon"
        }
+    } Else {
+        # woops, 501
+        Send-WebResponseCode501
     }
 }
 $CommandsToExport += "Remove-Logon"

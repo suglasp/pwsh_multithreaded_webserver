@@ -5,9 +5,9 @@
 **Why?** 
 I needed a webserver to host a tools/utility webpage as a sysadmin.
 The utility page needed to be flexible and be able to interact with low level components.
-Go lang or Rust would fit to, but takes more time to build and also in Powershell
+Go lang or Rust would fit to, but takes more time to write and also in Powershell,
 many of these low level components are present.
-In one day, I put this together and make it so, so that more then one user can interact with
+In few days, I put this together and make it so, so that more then one user can interact with
 the webserver at the same time.
 
 The part _'multithreaded'_ in the github name, is in fact untrue.
@@ -40,7 +40,7 @@ It is possible by changing a parameter to let the web instances listen "outside"
 - ./plugins : plugins go here (basically, they are Powershell modules)
 
 
-**Configuration**
+**Configuration** 
 1) edit config file ./loadbalancer/config/nginx.conf:
    config the loadbalancer, for example add more web instances, enable ip hasing, enable ssl.
 2) subfolder ./content :
@@ -83,19 +83,19 @@ Reset webserver stack from Powershell:
 Otherwise, you can just run it normally if it's for testing and running on port tcp/8080 or any of tcp/[1025-65535].*
 
 
-**Provided plugins**
+**Provided plugins** 
 - Web.Cookies : plugin to handle session cookies
 - Web.PostbackSomeApp : basic plugin sample for form postback processing (someapp example)
 - Web.Redirect : plugin to redirect server side to other page
 - Web.Logon : basic plugin sample to emulate a logon page (also uses the pwsh interpreter tags)
 
 
-**pwsh interpreter**
+**pwsh inline html interpreter** 
 There is a build-in small interpreter, so you can insert pwsh tags in your html code for processing.
 Works a bit like in php style interpreter code.
 
 
-**Examples included**
+**Examples included** 
 - http://localhost:<instance_port>/kill   :  route to shutdown the webserver
 - http://localhost:<instance_port>/ping   :  route to ping the webserver (used with .\pwsh_webserver_bootstrap.ps1 -verify)
 - http://localhost/cookie :  simple example with cookies

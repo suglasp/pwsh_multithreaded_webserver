@@ -36,6 +36,9 @@ Function Get-WebCookie {
 				}
 			}
 		}
+    } Else {
+        # woops, 501
+        Send-WebResponseCode501
     }
 	
 	Return $foundCookie
@@ -68,6 +71,9 @@ Function Set-WebCookie {
 		#$Context.Response.SetCookie($setCookie)
 		$context.Response.AddHeader("Set-Cookie", "$($setCookie.Name)=$($setCookie.Value)");
 		#$context.Response.AppendHeader("Set-Cookie", "name2=value2");
+    } Else {
+        # woops, 501
+        Send-WebResponseCode501
     }
 }
 $CommandsToExport += "Set-WebCookie"
@@ -86,8 +92,7 @@ Function Clear-WebCookie {
 
 	Write-Log -LogMsg " -> Clean cookie" -LogFile $global:WebLogFile
 
-    If (($global:http) -and ($Context)) {
-	
+    If (($global:http) -and ($Context)) {	
 		[System.Net.CookieCollection]$cookiesList = $context.Request.Cookies
 
 		[bool]$cookieFound = $false
@@ -109,6 +114,9 @@ Function Clear-WebCookie {
 			$setCookie.Expires = (Get-Date).AddDays(-1)
 			$Context.Response.SetCookie($setCookie)
 		}
+    } Else {
+        # woops, 501
+        Send-WebResponseCode501
     }
 }
 $CommandsToExport += "Clear-WebCookie"

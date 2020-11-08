@@ -4,7 +4,7 @@
 # Powershell webserver single instance
 #
 # created : 01/11/2020
-# changed : 07/11/2020
+# changed : 08/11/2020
 #
 # Only tested on Windows 10 and Server 2019 with Poweshell 5.1 and Powershell 7.0.3.
 # This script is written with cross platform in mind.
@@ -31,7 +31,33 @@
 
 #region Helper Functions
 #
+# Function : Print-Title
+# Startup banner
+#
+Function Print-Title {
+    Write-Log -LogMsg "" -LogFile $global:WebLogFile
+    Write-Log -LogMsg "------------------------------------------" -LogFile $global:WebLogFile
+    Write-Log -LogMsg "Powershell Web Server Instance" -LogFile $global:WebLogFile
+    Write-Log -LogMsg "------------------------------------------" -LogFile $global:WebLogFile
+    Write-Log -LogMsg "" -LogFile $global:WebLogFile
+
+    # output working folder and flags
+    Write-Log -LogMsg "Workdir : $($global:WorkFolder)" -LogFile $global:WebLogFile
+    Write-Log -LogMsg "Verbose (stdout) : $($global:DebugVerbose.ToString())" -LogFile $global:WebLogFile
+    Write-Log -LogMsg "Extra Verbose    : $($global:DebugExtraVerbose.ToString())" -LogFile $global:WebLogFile
+    Write-Log -LogMsg "Transscript logs : $($global:DebugTransscriptLogging.ToString())" -LogFile $global:WebLogFile
+    Write-Log -LogMsg "" -LogFile $global:WebLogFile
+
+    If ($global:DebugVerbose) {
+        Write-Log -LogMsg "[i] For performance, disable stdout output by setting DebugVerbose to $false." -LogFile $global:WebLogFile
+        Write-Log -LogMsg "" -LogFile $global:WebLogFile
+    }
+}
+
+
+#
 # Function : Start-Webserver
+# Init webserver instance
 #
 Function Start-Webserver {
     Param (
@@ -87,6 +113,7 @@ Function Start-Webserver {
 
 #
 # Function : Stop-Webserver
+# Shutdown webserver instance
 #
 Function Stop-Webserver {
     # shutdown http server
@@ -100,8 +127,10 @@ Function Stop-Webserver {
     Remove-NetFirewallRule -DisplayName "webserver_$($global:Port)" -ErrorAction SilentlyContinue
 }
 
+
 #
 # Function : Exit-Gracefully
+# Exit normal
 #
 Function Exit-Gracefully {
     # shutdown http server
@@ -118,8 +147,10 @@ Function Exit-Gracefully {
     Exit($global:ExitCode)
 }
 
+
 #
 # Function : Exit-Bailout
+# Exit on error
 #
 Function Exit-Bailout {
     # shutdown http server
@@ -136,8 +167,10 @@ Function Exit-Bailout {
     Exit($global:ExitCode)
 }
 
+
 #
 # Function : DynamicLoad-WebPlugins
+# Load webserver plugins
 #
 Function DynamicLoad-WebPlugins {
     Write-Log -LogMsg "" -LogFile $global:WebLogFile
@@ -170,8 +203,10 @@ Function DynamicLoad-WebPlugins {
     Write-Log -LogMsg "" -LogFile $global:WebLogFile
 }
 
+
 #
 # Function : DynamicUnload-WebPlugins
+# Unload webserver plugins
 #
 Function DynamicUnload-WebPlugins {
     Write-Log -LogMsg "" -LogFile $global:WebLogFile
@@ -190,8 +225,10 @@ Function DynamicUnload-WebPlugins {
     Write-Log -LogMsg "" -LogFile $global:WebLogFile
 }
 
+
 #
 # Function : Start-LocalLogging
+# Start Powershell transscript logging
 #
 Function Start-LocalLogging
 {
@@ -209,8 +246,10 @@ Function Start-LocalLogging
     }
 }
 
+
 #
 # Function : Stop-LocalLogging
+# Stop Powershell transscript logging
 #
 Function Stop-LocalLogging
 {
@@ -222,12 +261,15 @@ Function Stop-LocalLogging
     }
 }
 
+
 #
 # Function : Write-Log
+# Web server logging (stdout)
 #
 Function Write-Log
 {
     Param (
+        [Parameter( Mandatory = $false )]
         [string]$LogMsg,
         [Parameter( Mandatory = $True )]
         [string]$LogFile
@@ -242,24 +284,93 @@ Function Write-Log
     #$LogMsgStamped >> $LogFile
 }
 
-Function Print-Title {
-    Write-Log -LogMsg "" -LogFile $global:WebLogFile
-    Write-Log -LogMsg "------------------------------------------" -LogFile $global:WebLogFile
-    Write-Log -LogMsg "Powershell Web Server Instance" -LogFile $global:WebLogFile
-    Write-Log -LogMsg "------------------------------------------" -LogFile $global:WebLogFile
-    Write-Log -LogMsg "" -LogFile $global:WebLogFile
 
-    # output working folder and flags
-    Write-Log -LogMsg "Workdir : $($global:WorkFolder)" -LogFile $global:WebLogFile
-    Write-Log -LogMsg "Verbose (stdout) : $($global:DebugVerbose.ToString())" -LogFile $global:WebLogFile
-    Write-Log -LogMsg "Extra Verbose    : $($global:DebugExtraVerbose.ToString())" -LogFile $global:WebLogFile
-    Write-Log -LogMsg "Transscript logs : $($global:DebugTransscriptLogging.ToString())" -LogFile $global:WebLogFile
-    Write-Log -LogMsg "" -LogFile $global:WebLogFile
+#
+# Function : Send-WebByteResponse
+# Send Client Response as byte array
+#
+Function Send-WebByteResponse {
+    Param (
+        [Parameter( Mandatory = $True )]
+        [System.Net.HttpListenerContext]$Context,
+        [Parameter( Mandatory = $True )]
+        [byte[]]$ByteStream
+    )
 
-    If ($global:DebugVerbose) {
-        Write-Log -LogMsg "[i] For performance, disable stdout output by setting DebugVerbose to $false." -LogFile $global:WebLogFile
-        Write-Log -LogMsg "" -LogFile $global:WebLogFile
+    # output stream (html code in a bytes stream), if not empty
+   If ( ($Context) -and ($ByteStream) ) {
+        $context.Response.ContentLength64 = $ByteStream.Length
+        $context.Response.OutputStream.Write($ByteStream, 0, $ByteStream.Length) 
+        $context.Response.OutputStream.Close()
     }
+}
+
+
+#
+# Function : Send-WebHtmlResponse
+# Send Client Response as html code
+#
+Function Send-WebHtmlResponse {
+    Param (
+        [Parameter( Mandatory = $True )]
+        [System.Net.HttpListenerContext]$Context,
+        [Parameter( Mandatory = $True )]
+        [string]$HtmlStream
+    )
+
+    # output html string stream, if not empty
+    # convert to byte stream first.
+    If ( ($Context) -and ($HtmlStream) ) {
+        $Context.Response.Headers.Add("Content-Type","text/html")
+        [byte[]]$someBuffer = [System.Text.Encoding]::UTF8.GetBytes($HtmlStream)
+        $context.Response.ContentLength64 = $someBuffer.Length
+        $context.Response.OutputStream.Write($someBuffer, 0, $someBuffer.Length) 
+        $context.Response.OutputStream.Close()
+    }
+}
+
+
+#
+# Function : Send-WebResponseCode
+# Send Client Response code
+#
+Function Send-WebResponseCode {
+    Param (
+        [Parameter( Mandatory = $True )]
+        [System.Net.HttpListenerContext]$Context,
+        [Parameter( Mandatory = $True )]
+        [System.Net.HttpStatusCode]$ResponseCode,
+        [Parameter( Mandatory = $False )]
+        [string]$ResponseDescription
+    )        
+    
+    # send a response code
+    If ( ($Context) -and ($ResponseCode) ) {
+        Write-Log -LogMsg "[!] Send response code $($ResponseCode)" -LogFile $global:WebLogFile
+        $context.Response.StatusCode = [int32]$ResponseCode
+        If ($ResponseDescription) {
+            $context.Response.StatusDescription = $ResponseDescription
+        }
+        $context.Response.Close()
+    }
+}
+
+
+#
+# Function : Send-WebResponseCode404
+# Shortcut function, send Client Response code 404 (Page not found)
+#
+Function Send-WebResponseCode404 {
+    Send-WebResponseCode -Context $context -ResponseCode $([System.Net.HttpStatusCode]::NotFound) -ResponseDescription "Page not found"
+}
+
+
+#
+# Function : Send-WebResponseCode501
+# Shortcut function, send Client Response code 501 (Not Implemented)
+#
+Function Send-WebResponseCode501 {
+    Send-WebResponseCode -Context $context -ResponseCode $([System.Net.HttpStatusCode]::NotImplemented) -ResponseDescription "Server Not Implemented"
 }
 #endregion
 
@@ -267,6 +378,8 @@ Function Print-Title {
 #region Interpreter Function
 #
 # Function : Exec-PwshWebDecoder
+# HTML Inline interpreter or decoder.
+# Executs all lines between <?pwsh and pwsh> tags server side.
 #
 Function Exec-PwshWebDecoder {
     Param (
@@ -363,9 +476,12 @@ Function Exec-PwshWebDecoder {
 
 
 
+
+
 #region Main function
 #
 # Function : Main
+# C-Style main function
 #
 Function Main {
     Param (
@@ -498,17 +614,10 @@ Function Main {
             # http://127.0.0.1/ping'
             If ($context.Request.HttpMethod -eq 'GET' -and $context.Request.RawUrl -eq '/ping') {
                 Write-Log -LogMsg "[!] Webserver Ping, sending pong" -LogFile $global:WebLogFile
-                [string]$pingResponse = "<html><head><title>ping</title><body>Received Ping. Return Pong.</body></html>"
+                [string]$pingResponse = "<html><head><title>ping-pong</title><body>Received Ping.<br />Returned Pong!</body></html>"
 
                 #resposed to the request
-                $buffer = [System.Text.Encoding]::UTF8.GetBytes($pingResponse)
-                $context.Response.Headers.Add("Content-Type","text/html")
-                $context.Response.StatusCode = [int32][System.Net.HttpStatusCode]::OK
-                $context.Response.StatusDescription = "PING OK"
-                $context.Response.ContentLength64 = $buffer.Length
-                $context.Response.OutputStream.Write($buffer, 0, $buffer.Length)
-                $context.Response.OutputStream.Close()
-                
+                Send-WebHtmlResponse -Context $Context -HtmlStream $pingResponse
                 Continue          
             }
                         
@@ -529,26 +638,18 @@ Function Main {
                 }
                 # ---- read cookie(s)
 
-                #respose to the request
-                $buffer = [System.Text.Encoding]::UTF8.GetBytes($cookieResponse)
-                $context.Response.Headers.Add("Content-Type","text/html")
-                $context.Response.StatusCode = [int32][System.Net.HttpStatusCode]::OK
-                $context.Response.StatusDescription = "COOKIES OK"                
-
-                # ---- write a cookie                
+                # ---- write a cookie
                 If ($getCookie) {
-                    # if exists, clear cookie
+                    # if exists, clear the existing cookie
                     Clear-WebCookie -Context $context -CookieID "ID"
                 } Else {
-                    # if not exitst, make cookie
+                    # if not exists, create a cookie
                     Set-WebCookie -Context $context -CookieID "ID" -CookieValue "$([Environment]::GetEnvironmentVariable("USERNAME"))"
                 }
                 # ---- write a cookie
 
-                $context.Response.ContentLength64 = $buffer.Length
-                $context.Response.OutputStream.Write($buffer, 0, $buffer.Length)
-                $context.Response.OutputStream.Close()        
-                
+                #respose to the request
+                Send-WebHtmlResponse -Context $Context -HtmlStream $cookieResponse                
                 Continue
             }
 
@@ -590,7 +691,7 @@ Function Main {
                     } Else {
                         # if there is no ending slash in the provided Url, try redirecting to the full url + index page.
                         $redirectUrl = $context.Request.Url.AbsolutePath + "/" + $global:IndexPage
-                        Start-WebRedirect -Context $context -RelativeUrl $redirectUrl
+                        Start-WebRedirect -Context $context -RelativeUrl $redirectUrl -CloseResponse
                         Continue
                     }
                 }
@@ -608,7 +709,7 @@ Function Main {
                         #[string]$somefile = Get-Content -Path $pagetoload -Raw
                         #$buffer = [System.Text.Encoding]::UTF8.GetBytes($somefile)
 
-                        $streamBuffer = [System.IO.File]::ReadAllBytes($pagetoload)
+                        [byte[]]$streamBuffer = [System.IO.File]::ReadAllBytes($pagetoload)
 
                         [bool]$bNeedInterpreter = $false
 
@@ -647,19 +748,12 @@ Function Main {
                                 $streamBuffer = [System.Text.Encoding]::UTF8.GetBytes($strippedHTML)
                             }
                         }
-
-                        # output streamBuffer (html code in a bytes stream) if not empty
-                        If ($streamBuffer) {
-                            #$Context.Response.ContentType = [System.Web.MimeMapping]::GetMimeMapping($pagetoload)
-                            $context.Response.ContentLength64 = $streamBuffer.Length
-                            $context.Response.OutputStream.Write($streamBuffer, 0, $streamBuffer.Length) 
-                            $context.Response.OutputStream.Close()
-                        }
+                        
+                        # send our streamBuffer
+                        Send-WebByteResponse -Context $context -ByteStream $streamBuffer
                     } Else {
-                        # woops, 404                
-                        $context.Response.StatusCode = [int32][System.Net.HttpStatusCode]::NotFound
-                        $context.Response.StatusDescription = "Page not found"
-                        $context.Response.Close()
+                        # woops, 404    
+                        Send-WebResponseCode404
                     }
                 }
 
@@ -677,7 +771,7 @@ Function Main {
         Write-Log -LogMsg "[!] Http server failed!?" -LogFile $global:WebLogFile
     }
 
-    # exit Gracefully
+    # Exit Gracefully
     Exit-Gracefully
 }
 #endregion
