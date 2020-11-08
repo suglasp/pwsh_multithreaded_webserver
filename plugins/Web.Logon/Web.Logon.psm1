@@ -18,12 +18,14 @@ $CommandsToExport = @()
 Function Validate-Logon {
     Param (
         [Parameter( Mandatory = $True )]
-        [System.Net.HttpListenerContext]$Context
+        [System.Net.HttpListenerContext]$Context,
+        [Parameter( Mandatory = $True )]
+        [String]$LogonCookieName
     )
 
     If (($global:http) -and ($Context)) {
        # search for a cookie named "logon"
-       [System.Net.Cookie]$logonCookie = Get-WebCookie -Context $context -CookieSearchID "pwshlogonid"
+       [System.Net.Cookie]$logonCookie = Get-WebCookie -Context $context -CookieSearchID $LogonCookieName
 
        # check if cookie is set or not
        If ($logonCookie) {
@@ -40,15 +42,15 @@ Function Validate-Logon {
                 $data.add($part[0], $part[1].Replace("+", " "))
             }
 
-            $username = $data.item('username')
-            $password = $data.item('password')
+            $usernameForm = $data.item('username')
+            $passwordForm = $data.item('password')
 
             # this is not a real logon form check, just to emulate something
             # values my NOT be empty
-            If ((-not ([string]::IsNullOrEmpty($username))) -or (-not ([string]::IsNullOrEmpty($password)))) {
+            If ((-not ([string]::IsNullOrEmpty($usernameForm))) -or (-not ([string]::IsNullOrEmpty($passwordForm)))) {
                 # provided password must check local username that logged on to OS
-                If ($password.ToLowerInvariant().Equals([environment]::GetEnvironmentVariable("USERNAME").ToLowerInvariant())) {
-                    Set-WebCookie -Context $Context -CookieID "pwshlogonid" -CookieValue "$([Environment]::GetEnvironmentVariable("USERNAME"))"
+                If ($passwordForm.ToLowerInvariant().Equals([environment]::GetEnvironmentVariable("USERNAME").ToLowerInvariant())) {
+                    Set-WebCookie -Context $Context -CookieID $LogonCookieName -CookieValue "$($usernameForm)"
                     Start-WebRedirect -Context $Context -RelativeUrl "/logon/success.html" -CloseResponse
                 } Else {
                     #Start-WebRedirect -Context $Context -RelativeUrl "/logon/failed.html" -CloseResponse
@@ -71,26 +73,58 @@ $CommandsToExport += "Validate-Logon"
 
 
 #
-# Function : Approve-Logon
+# Function : Approve-LogonCheck
 #
-Function Approve-Logon {
+Function Approve-LogonCheck {
     Param (
         [Parameter( Mandatory = $True )]
-        [System.Net.HttpListenerContext]$Context
+        [System.Net.HttpListenerContext]$Context,
+        [Parameter( Mandatory = $True )]
+        [String]$LogonCookieName
     )
 
     If (($global:http) -and ($Context)) {
-       [System.Net.Cookie]$logonCookie = Get-WebCookie -Context $Context -CookieSearchID "pwshlogonid"
+       [System.Net.Cookie]$logonCookie = Get-WebCookie -Context $Context -CookieSearchID $LogonCookieName
+
+       If ($logonCookie) {
+            Write-Log -LogMsg " -> LogonCheck cookie $($LogonCookieName) is set" -LogFile $global:WebLogFile
+            Start-WebRedirect -Context $Context -RelativeUrl "/logon/success.html"
+       } Else {
+            Write-Log -LogMsg " -> LogonCheck cookie $($LogonCookieName) is not set" -LogFile $global:WebLogFile
+       }
+    } Else {
+       # woops, 501
+       Send-WebResponseCode501
+    }
+}
+$CommandsToExport += "Approve-LogonCheck"
+
+#
+# Function : Approve-SuccessCheck
+#
+Function Approve-SuccessCheck {
+    Param (
+        [Parameter( Mandatory = $True )]
+        [System.Net.HttpListenerContext]$Context,
+        [Parameter( Mandatory = $True )]
+        [String]$LogonCookieName
+    )
+
+    If (($global:http) -and ($Context)) {
+       [System.Net.Cookie]$logonCookie = Get-WebCookie -Context $Context -CookieSearchID $LogonCookieName
 
        If (-not ($logonCookie)) {
-           Start-WebRedirect -Context $Context -RelativeUrl "/logon/logon.html"
+            Write-Log -LogMsg " -> SuccessCheck cookie $($LogonCookieName) is not set" -LogFile $global:WebLogFile
+            Start-WebRedirect -Context $Context -RelativeUrl "/logon/logon.html"
+       } Else {
+            Write-Log -LogMsg " -> SuccessCheck cookie $($LogonCookieName) is set" -LogFile $global:WebLogFile
        }
     } Else {
         # woops, 501
         Send-WebResponseCode501
     }
 }
-$CommandsToExport += "Approve-Logon"
+$CommandsToExport += "Approve-SuccessCheck"
 
 
 #
@@ -99,11 +133,13 @@ $CommandsToExport += "Approve-Logon"
 Function Remove-Logon {
     Param (
         [Parameter( Mandatory = $True )]
-        [System.Net.HttpListenerContext]$Context
+        [System.Net.HttpListenerContext]$Context,
+        [Parameter( Mandatory = $True )]
+        [String]$LogonCookieName
     )
 
     If (($global:http) -and ($Context)) {
-       [System.Net.Cookie]$logonCookie = Get-WebCookie -Context $Context -CookieSearchID "pwshlogonid"
+       [System.Net.Cookie]$logonCookie = Get-WebCookie -Context $Context -CookieSearchID $LogonCookieName
 
        If ($logonCookie) {
            Clear-WebCookie -Context $Context -CookieID "pwshlogonid"
