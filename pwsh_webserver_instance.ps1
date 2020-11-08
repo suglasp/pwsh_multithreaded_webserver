@@ -13,12 +13,12 @@
 
 #region Global vars
 [string]$global:WorkFolder = $PSScriptRoot
+[UInt32]$global:Port = 8080
+[UInt32]$global:ExitCode = 0
 [string]$global:ContentFolder = "$($global:WorkFolder)\content"
 [string]$global:WebPluginsPath = "$($global:WorkFolder)\plugins"
 [string]$global:WebLogsPath = "$($global:WorkFolder)\logs"
 [string]$global:WebLogFile = "$($global:WebLogsPath)\$([environment]::GetEnvironmentVariable("COMPUTERNAME").ToLowerInvariant())_$($global:port).log"
-[UInt32]$global:Port = 8080
-[UInt32]$global:ExitCode = 0
 [System.Net.HttpListener]$global:Http = [System.Net.HttpListener]::new()
 [bool]$global:PublishLocalhost = $true
 [bool]$global:DebugVerbose = $true
