@@ -284,6 +284,25 @@ Function Write-Log
     #$LogMsgStamped >> $LogFile
 }
 
+#
+# Function : Get-WebRequestMethod
+# Returns GET, POST, PUT, CREATE...
+#
+Function Get-WebRequestMethod {
+    Param (
+        [Parameter( Mandatory = $True )]
+        [System.Net.HttpListenerContext]$Context
+    )
+
+    [string]$httpMethod = "GET"
+
+    If ($Context) {
+        $httpMethod = $context.Request.HttpMethod.ToUpperInvariant()
+    }
+
+    Return $httpMethod
+}
+
 
 #
 # Function : Send-WebByteResponse
@@ -298,7 +317,7 @@ Function Send-WebByteResponse {
     )
 
     # output stream (html code in a bytes stream), if not empty
-   If ( ($Context) -and ($ByteStream) ) {
+    If ( ($Context) -and ($ByteStream) ) {
         $context.Response.ContentLength64 = $ByteStream.Length
         $context.Response.OutputStream.Write($ByteStream, 0, $ByteStream.Length) 
         $context.Response.OutputStream.Close()
@@ -599,7 +618,7 @@ Function Main {
 
             # kill webserver
             # http://127.0.0.1/kill'
-            If ($context.Request.HttpMethod -eq 'GET' -and $context.Request.RawUrl -eq '/kill') {
+            If ((Get-WebRequestMethod -Context $context).Equals('GET') -and ($context.Request.RawUrl -eq '/kill')) {
                 Write-Log -LogMsg "[!] HTTP Server going down!" -LogFile $global:WebLogFile
                 $context.Response.StatusCode = [int32][System.Net.HttpStatusCode]::GatewayTimeout
                 $context.Response.StatusDescription = "Gateway timeout"
@@ -612,7 +631,7 @@ Function Main {
 
             # webserver ping
             # http://127.0.0.1/ping'
-            If ($context.Request.HttpMethod -eq 'GET' -and $context.Request.RawUrl -eq '/ping') {
+            If ((Get-WebRequestMethod -Context $context).Equals('GET') -and ($context.Request.RawUrl -eq '/ping')) {
                 Write-Log -LogMsg "[!] Webserver Ping, sending pong" -LogFile $global:WebLogFile
                 [string]$pingResponse = "<html><head><title>ping-pong</title><body>Received Ping.<br />Returned Pong!</body></html>"
 
@@ -624,7 +643,7 @@ Function Main {
 
             # webserver cookie
             # http://127.0.0.1/cookie'
-            If ($context.Request.HttpMethod -eq 'GET' -and $context.Request.RawUrl -eq '/cookie') {
+            If ((Get-WebRequestMethod -Context $context).Equals('GET') -and ($context.Request.RawUrl -eq '/cookie')) {
                 Write-Log -LogMsg "[!] Webserver cookie" -LogFile $global:WebLogFile
                 [string]$cookieResponse = "<html><head><title>cookie</title><body>Cookies!</body></html>"
 
@@ -656,28 +675,28 @@ Function Main {
             
             # forms backend response (from Plugin Web.Postback)
             # http://127.0.0.1/backend/someapppost'
-            If ($context.Request.HttpMethod -eq 'POST' -and $context.Request.RawUrl -eq '/backend/someapppost') {
+            If ((Get-WebRequestMethod -Context $context).Equals('POST') -and $context.Request.RawUrl -eq '/backend/someapppost') {
                 Invoke-ProcessPostBack -Context $context
                 Continue
             }   
             
             # forms backend response (from Plugin Web.Logon)
             # http://127.0.0.1/backend/logon'
-            If ($context.Request.HttpMethod -eq 'POST' -and $context.Request.RawUrl -eq '/backend/logon') {
-                Validate-Logon -Context $context
-                Continue
-            } 
+            #If ((Get-WebRequestMethod -Context $context).Equals('POST') -and ($context.Request.RawUrl -eq '/backend/logon')) {
+            #    Validate-Logon -Context $context -LogonCookieName "mylogonid"
+            #    Continue
+            #}
 
             # forms backend response (from Plugin Web.Logon)
             # http://127.0.0.1/backend/logon'
-            If ($context.Request.HttpMethod -eq 'GET' -and $context.Request.RawUrl -eq '/backend/logonoff') {
-                Remove-Logon -Context $context
-                Continue
-            }
+            #If ((Get-WebRequestMethod -Context $context).Equals('POST') -and ($context.Request.RawUrl -eq '/backend/logonoff')) {
+            #    Remove-Logon -Context $context -LogonCookieName "mylogonid"
+            #    Continue
+            #}
 
             # Request root and other files
             # http://127.0.0.1/<filename>.<ext>
-            If ($context.Request.HttpMethod -eq 'GET' -and $context.Request.RawUrl -like "/*") {
+            If ((Get-WebRequestMethod -Context $context).Equals('GET') -and ($context.Request.RawUrl -like "/*")) {
                 # if we're at root '/' then replace with '/index.html'. Otherwise, extract pagename.
                 [string]$requestedFilename = ""
                 
