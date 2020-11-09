@@ -1,0 +1,52 @@
+
+<!-- html native comment : correct working example, should execute the inline powershell code -->
+<!-- html comment should be outputted with rest of html code. The client browser should receive this -->
+<!-- regex case insensitive testing -->
+
+<?pwsh
+    // comment : lowercase
+	Write-Host "lowercase"
+pwsh>
+
+
+<?PWSH
+    ; comment : uppercase
+	Write-Host "uppercase"
+PWSH>
+
+
+<?PwSH
+    # comment : mixed cade
+	Write-Host "mixed case"
+pWsH>
+
+
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+
+  <title>A Powershell Webserver</title>
+  <meta name="description" content="A Powershell Webserver">
+  <meta name="author" content="Suglasp">
+
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+<h1>A Powershell Webserver - Logon form basic demo</h1>
+
+<form action='/backend/logon' method='post'>
+	<p>A Basic Form to emulate logon</p>
+	<p>username (must contain any value)</p>
+	<input type="text" name="username">
+	<p>password (must be same as OS login to succeed)</p>
+	<input type="password" id="password" name="password" minlength="6" required>
+	<br /><br />
+	<input type="submit" value="Submit">
+</form>
+
+</body>
+</html>

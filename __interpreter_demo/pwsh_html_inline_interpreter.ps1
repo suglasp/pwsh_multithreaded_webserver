@@ -1,16 +1,22 @@
 ﻿
 #
 # Pieter De Ridder
-# Decoder/parser to filter powershell statement out of html code
-# The result it executes statement in the html code as powershell.
-# The output is html code (to return to browser)
+# https://www.github.com/suglasp
+#
+# Macro-Interpreter (or parser/-decoder) to filter Powershell statement inline with html code.
+# The result is, it executes statement from within the html code as Powershell.
+# The output is html code (to return to browser).
+# This code is a test sample, that was later backported to my "Scalable Powershell Webserver" project.
 #
 # Created : 06/11/2020
-# Updated : 07/11/2020
+# Updated : 09/11/2020
 #
+
 
 #
 # Function : Exec-PwshWebDecoder
+# HTML Inline macro-interpreter or decoder.
+# Executs all lines between <?pwsh and pwsh> tags on server-side.
 #
 Function Exec-PwshWebDecoder {
     Param (
@@ -25,9 +31,10 @@ Function Exec-PwshWebDecoder {
         [string]$decodedHTMLLines = [string]::Empty
 
         # check if we have somewhere in the body the word "pwsh"
-        If ($decoderBody.ToLowerInvariant().Contains("?pwsh")) {
+        If ($decoderBody.ToLowerInvariant().Contains("<?pwsh")) {
             # we always need to have equal pwsh statement, otherwise the decoder will hang forever
-            If ($([regex]::Matches($decoderBody, "pwsh" ).Count % 2) -eq 0) {
+            If ($([System.Text.RegularExpressions.Regex]::Matches($decoderBody, "(<[\?]pwsh|pwsh[>])", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase).Count % 2) -eq 0) {
+            #If ($([System.Text.RegularExpressions.Regex]::Matches($decoderBody, "pwsh" ).Count % 2) -eq 0) {
                 # split lines in string
                 $decoderBodyArray = @($decoderBody.Split([Environment]::NewLine, [StringSplitOptions]::RemoveEmptyEntries))
 
@@ -41,6 +48,7 @@ Function Exec-PwshWebDecoder {
                     [string]$decoderLineTrim = $decoderLine.Trim()
 
                     # execute pwsh block and finish decoding
+                    # the line can only end with "pwsh>", and no other statements may be written on the line
                     If ($decoderLineTrim.ToLowerInvariant().Contains("pwsh>")) {
                         If (-not ([string]::IsNullOrEmpty($decoderPwshStatements))) {
                             Write-Host "---- EXECUTE PWSH ----" -ForegroundColor Red
@@ -115,8 +123,9 @@ Function Exec-PwshWebDecoder {
 [string]$global:WorkFolder = $PSScriptRoot
 
 #[string]$pagetoload = $null
-[string]$pagetoload = "$($global:WorkFolder)\decodertest.html"
+#[string]$pagetoload = "$($global:WorkFolder)\decodertest.html"
 #[string]$pagetoload = "$($global:WorkFolder)\decodertest_returnvalue.html"
+[string]$pagetoload = "$($global:WorkFolder)\decodertest_upper_lower.html"
 #[string]$pagetoload = "$($global:WorkFolder)\decodertestbad1.html"
 #[string]$pagetoload = "$($global:WorkFolder)\decodertestbad2.html"
 #[string]$pagetoload = "$($global:WorkFolder)\decodertestnocode.html"
