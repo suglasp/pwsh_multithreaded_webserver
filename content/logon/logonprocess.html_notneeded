@@ -1,0 +1,12 @@
+﻿<?pwsh
+    If ((Get-WebRequestMethod -Context $context).Equals('GET')) {
+        Write-Host "GET"
+        ; redirect when someone does a http GET)
+        Start-WebRedirect -Context $Context -RelativeUrl "/logon/logon.html"
+    } Else {        
+        Write-Host "POST"
+        ; validate the logon when the request is a http POST
+        Validate-Logon -Context $context -LogonCookieName "mylogonid"
+        #Continue
+    }
+pwsh>

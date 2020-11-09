@@ -1,0 +1,28 @@
+<?pwsh
+    ; check if we are logged on (cookie present?)
+    Approve-LogonCheck -Context $context -LogonCookieName "mylogonid"
+pwsh>
+
+
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+
+  <title>A Powershell Webserver</title>
+  <meta name="description" content="A Powershell Webserver">
+  <meta name="author" content="Suglasp">
+  
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+<?pwsh
+	Approve-Logon -Context $context
+pwsh>
+	<h1>Nope, Logon Failed :(</h1>
+		
+	<p><a href="/logon" target="_self">Try again ...</a></p>
+</body>
+</html>
