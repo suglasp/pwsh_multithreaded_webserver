@@ -4,7 +4,7 @@
 # Webserver very basic plugin to emulate logon form
 #
 # Created : 05/11/2020
-# Updated : 08/11/2020
+# Updated : 09/11/2020
 #
 # Notice: This module has RequiredModules set in Web.Logon.psd1.
 # This module has a requirement for Web.Redirect and Web.Cookies.
@@ -53,15 +53,16 @@ Function Validate-Logon {
                     Set-WebCookie -Context $Context -CookieID $LogonCookieName -CookieValue "$($usernameForm)"
                     Start-WebRedirect -Context $Context -RelativeUrl "/logon/success.html" -CloseResponse
                 } Else {
-                    #Start-WebRedirect -Context $Context -RelativeUrl "/logon/failed.html" -CloseResponse
+                    Start-WebRedirect -Context $Context -RelativeUrl "/logon/failed.html" -CloseResponse
                     
-                    [string]$html = "<html><head><title>failed</title><h1>A Powershell Webserver</h1><p>Logon failed</p></body></html>"
-                    Send-WebHtmlResponse -Context $Context -HtmlStream $html
+                    #[string]$html = "<html><head><title>failed</title><h1>A Powershell Webserver</h1><p>Logon failed</p></body></html>"
+                    #Send-WebHtmlResponse -Context $Context -HtmlStream $html
                 }
             } Else {
-                #Start-WebRedirect -Context $Context -RelativeUrl "/logon/failed.html" -CloseResponse
-                [string]$html = "<html><head><title>failed</title><h1>A Powershell Webserver</h1><p>Logon failed</p></body></html>"
-                Send-WebHtmlResponse -Context $Context -HtmlStream $html
+                Start-WebRedirect -Context $Context -RelativeUrl "/logon/failed.html" -CloseResponse
+                
+                #[string]$html = "<html><head><title>failed</title><h1>A Powershell Webserver</h1><p>Logon failed</p></body></html>"
+                #Send-WebHtmlResponse -Context $Context -HtmlStream $html
             }
        }
     } Else {
@@ -142,7 +143,7 @@ Function Remove-Logon {
        [System.Net.Cookie]$logonCookie = Get-WebCookie -Context $Context -CookieSearchID $LogonCookieName
 
        If ($logonCookie) {
-           Clear-WebCookie -Context $Context -CookieID "pwshlogonid"
+           Clear-WebCookie -Context $Context -CookieID $LogonCookieName
            Start-WebRedirect -Context $Context -RelativeUrl "/logon"
        }
     } Else {

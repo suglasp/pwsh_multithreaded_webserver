@@ -28,8 +28,10 @@ Function Get-WebCookie {
 
         # find cookie
 		If ( ($cookiesList) -and (-not [string]::IsNullOrEmpty($CookieSearchID)) ) {
-			ForEach($getCookie In $cookiesList) {
+			Write-Log -LogMsg "     |-> Enum cookies list" -LogFile $global:WebLogFile
+            ForEach($getCookie In $cookiesList) {
 				If ($getCookie.Name.ToLowerInvariant().Equals($CookieSearchID.ToLowerInvariant())) {
+                    Write-Log -LogMsg "     |-> Found in cache" -LogFile $global:WebLogFile
                     Return $getCookie
 				}
 			}
@@ -42,6 +44,7 @@ Function Get-WebCookie {
     Return $null
 }
 $CommandsToExport += "Get-WebCookie"
+
 
 #
 # Function : Set-WebCookie
@@ -98,45 +101,63 @@ Function Clear-WebCookie {
 
     If (($global:http) -and ($Context)) {	
         [System.Net.CookieCollection]$cookiesList = $context.Request.Cookies
-
-        #[bool]$cookieFound = $false
-
+        
 		If ( ($cookiesList) -and (-not [string]::IsNullOrEmpty($CookieID)) ) {
-			ForEach($getCookie in $cookiesList) {
+            Write-Log -LogMsg " -> Want to clean a cookie" -LogFile $global:WebLogFile
+
+			ForEach($getCookie In $cookiesList) {
 				If ($getCookie.Name.ToLowerInvariant().Equals($CookieID.ToLowerInvariant())) {
+
+                    # one way to delete cookie, is expire it and rewrite it
                     [System.Net.Cookie]$updateCookie = $getCookie
                     $updateCookie.Value = [string]::Empty
                     $updateCookie.Expires = (Get-Date).AddSeconds(-30) # expire big time
                     $updateCookie.Expired = $true
-                    $updateCookie
-
-                    #$cookiesList.Remove($getCookie)
-                    #$cookiesList.Remove($cookiesList.Item($getCookie.Name))
-                    #$Context.Response.Cookies.Remove($cookiesList.Item($getCookie.Name))
-                    #$cookieFound = $true
                     $Context.Response.SetCookie($updateCookie)
-                    Write-Log -LogMsg " -> Cleaned cookie $($updateCookie.Name)" -LogFile $global:WebLogFile
+
+                    # other way is to remove it from the collection
+                    #$Context.Response.Cookies.Remove($getCookie)
+                    #$Context.Response.Cookies.Remove($cookiesList.Item($getCookie.Name))
+
+                    Write-Log -LogMsg " -> Cleaned cookie $($getCookie.Name)" -LogFile $global:WebLogFile
                     Break
 				}
 			}
 		}
-		
-		#If ($cookieFound) {
-		#	[System.Net.Cookie]$setCookie = [System.Net.Cookie]::new()
-        #
-		#	# clear cookie (empty value)
-		#	$setCookie.Name = "$($CookieID)"
-		#	$setCookie.Value = [string]::Empty
-		#	$setCookie.Expires = (Get-Date).AddSeconds(-30) # expire big time
-        #   $setCookie.Expired = $true
-		#	$Context.Response.SetCookie($setCookie)
-        #   Write-Log -LogMsg " -> Cleaned cookie $($setCookie.Name)" -LogFile $global:WebLogFile
-		#}
     } Else {
         # woops, 501
         Send-WebResponseCode501
     }
 }
 $CommandsToExport += "Clear-WebCookie"
+
+
+#
+# Function : Clear-WebCookieAll
+#
+Function Clear-WebCookieAll {
+    Param (
+		[Parameter( Mandatory = $True )]
+        [System.Net.HttpListenerContext]$Context
+    )
+
+    Write-Log -LogMsg " -> Want to clean ALL cookies" -LogFile $global:WebLogFile
+
+    If (($global:http) -and ($Context)) {        
+        [System.Net.CookieCollection]$cookiesList = $context.Request.Cookies
+        
+        If ( ($cookiesList) -and ($cookiesList.Count -gt 0) ) {
+            $Context.Response.Cookies.Clear()
+        }
+
+        Write-Log -LogMsg " -> Cleaned ALL cookies" -LogFile $global:WebLogFile
+    } Else {
+        # woops, 501
+        Send-WebResponseCode501
+    }
+}
+$CommandsToExport += "Clear-WebCookieAll"
+
+
 
 Export-ModuleMember -Function $CommandsToExport
