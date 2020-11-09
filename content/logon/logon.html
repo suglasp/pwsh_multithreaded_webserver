@@ -1,7 +1,7 @@
 <?pwsh
-   Approve-Logon -Context $context
-pwsh/>
-
+    ; check if we are logged on (cookie present?)
+    Approve-LogonCheck -Context $context -LogonCookieName "mylogonid"
+pwsh>
 
 <!DOCTYPE html>
 
@@ -20,7 +20,7 @@ pwsh/>
 
 <h1>A Powershell Webserver - Logon form basic demo</h1>
 
-<form action='/backend/logon' method='post'>
+<form action='/logon/logonprocess.html' method='post'>
 	<p>A Basic Form to emulate logon</p>
 	<p>username (must contain any value)</p>
 	<input type="text" name="username">

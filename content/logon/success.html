@@ -1,3 +1,8 @@
+<?pwsh
+    ; check if we are logged on (cookie present?)
+	Approve-SuccessCheck -Context $context -LogonCookieName "mylogonid"
+pwsh>
+
 <!DOCTYPE html>
 
 <html lang="en">
@@ -12,15 +17,11 @@
 </head>
 
 <body>
-<?pwsh
-	Approve-Logon -Context $context
-pwsh>
-
 	<h1>Yay, Logon Success!</h1>
 	
 	<p>
 	<a href="/logon" target="_self">Go to logon page, it should redirect directly to here.</a><br />
-	<a href="/backend/logonoff" target="_self">Logoff.</a><br />
+	<a href="/logon/logoff.html" target="_self">Logoff.</a><br />
 	</p>
 </body>
 </html>
