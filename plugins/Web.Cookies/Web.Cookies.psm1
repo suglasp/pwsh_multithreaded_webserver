@@ -4,7 +4,7 @@
 # Webserver Cookies Plugin
 #
 # Created : 04/11/2020
-# Updated : 08/11/2020
+# Updated : 09/11/2020
 #
 
 $CommandsToExport = @()
@@ -21,13 +21,13 @@ Function Get-WebCookie {
 		[string]$CookieSearchID
     )
 
-	Write-Log -LogMsg " -> Get cookie" -LogFile $global:WebLogFile
+	Write-Log -LogMsg " -> Get cookie $([char](34))$($CookieSearchID)$([char](34))" -LogFile $global:WebLogFile
 
     If (($global:http) -and ($Context)) {	
 		[System.Net.CookieCollection]$cookiesList = $context.Request.Cookies
 
         # find cookie
-		If ($cookiesList) {
+		If ( ($cookiesList) -and (-not [string]::IsNullOrEmpty($CookieSearchID)) ) {
 			ForEach($getCookie In $cookiesList) {
 				If ($getCookie.Name.ToLowerInvariant().Equals($CookieSearchID.ToLowerInvariant())) {
                     Return $getCookie
@@ -62,7 +62,7 @@ Function Set-WebCookie {
 
 	Write-Log -LogMsg " -> Set cookie" -LogFile $global:WebLogFile
 
-    If (($global:http) -and ($Context)) {
+    If (($global:http) -and ($Context) -and (-not [string]::IsNullOrEmpty($CookieID))) {
         [System.Net.Cookie]$setCookie = [System.Net.Cookie]::new()
 
 		# set cookie
@@ -94,31 +94,44 @@ Function Clear-WebCookie {
 		[string]$CookieID
     )
 
-	Write-Log -LogMsg " -> Clean cookie" -LogFile $global:WebLogFile
+	Write-Log -LogMsg " -> Want to clean a cookie" -LogFile $global:WebLogFile
 
     If (($global:http) -and ($Context)) {	
-		[System.Net.CookieCollection]$cookiesList = $context.Request.Cookies
+        [System.Net.CookieCollection]$cookiesList = $context.Request.Cookies
 
-		[bool]$cookieFound = $false
+        #[bool]$cookieFound = $false
 
-		If ($cookiesList) {
+		If ( ($cookiesList) -and (-not [string]::IsNullOrEmpty($CookieID)) ) {
 			ForEach($getCookie in $cookiesList) {
-				If ($getCookie.Name.ToLowerInvariant() -eq $CookieID.ToLowerInvariant()) {
-					$cookieFound = $true
+				If ($getCookie.Name.ToLowerInvariant().Equals($CookieID.ToLowerInvariant())) {
+                    [System.Net.Cookie]$updateCookie = $getCookie
+                    $updateCookie.Value = [string]::Empty
+                    $updateCookie.Expires = (Get-Date).AddSeconds(-30) # expire big time
+                    $updateCookie.Expired = $true
+                    $updateCookie
+
+                    #$cookiesList.Remove($getCookie)
+                    #$cookiesList.Remove($cookiesList.Item($getCookie.Name))
+                    #$Context.Response.Cookies.Remove($cookiesList.Item($getCookie.Name))
+                    #$cookieFound = $true
+                    $Context.Response.SetCookie($updateCookie)
+                    Write-Log -LogMsg " -> Cleaned cookie $($updateCookie.Name)" -LogFile $global:WebLogFile
+                    Break
 				}
-			}                    
+			}
 		}
 		
-		If ($cookieFound) {
-			[System.Net.Cookie]$setCookie = [System.Net.Cookie]::new()
-
-			# clear cookie (empty value)
-			$setCookie.Name = "$($CookieID)"
-			$setCookie.Value = ""
-			$setCookie.Expires = (Get-Date).AddMonths(-1) # expire big time
-            $setCookie.Expired = $false
-			$Context.Response.SetCookie($setCookie)
-		}
+		#If ($cookieFound) {
+		#	[System.Net.Cookie]$setCookie = [System.Net.Cookie]::new()
+        #
+		#	# clear cookie (empty value)
+		#	$setCookie.Name = "$($CookieID)"
+		#	$setCookie.Value = [string]::Empty
+		#	$setCookie.Expires = (Get-Date).AddSeconds(-30) # expire big time
+        #   $setCookie.Expired = $true
+		#	$Context.Response.SetCookie($setCookie)
+        #   Write-Log -LogMsg " -> Cleaned cookie $($setCookie.Name)" -LogFile $global:WebLogFile
+		#}
     } Else {
         # woops, 501
         Send-WebResponseCode501
