@@ -101,5 +101,6 @@ Works a bit like in php style interpreter code.
 - http://localhost/cookie :  simple example with cookies
 - http://localhost/       :  example index page, no markup
 - http://localhost/someapp/someapp.html : example app to test image and css loading
+- http://localhost/logon/logon.html : example app to test inline powershell processing and simulate a logon page
 
 Pieter De Ridder (Suglasp)
