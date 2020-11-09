@@ -34,7 +34,7 @@ Function Exec-PwshWebDecoder {
         If ($decoderBody.ToLowerInvariant().Contains("<?pwsh")) {
             # we always need to have equal pwsh statement, otherwise the decoder will hang forever
             If ($([System.Text.RegularExpressions.Regex]::Matches($decoderBody, "(<[\?]pwsh|pwsh[>])", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase).Count % 2) -eq 0) {
-            #If ($([System.Text.RegularExpressions.Regex]::Matches($decoderBody, "pwsh" ).Count % 2) -eq 0) {
+            #If ($([System.Text.RegularExpressions.Regex]::Matches($decoderBody, "pwsh").Count % 2) -eq 0) {
                 # split lines in string
                 $decoderBodyArray = @($decoderBody.Split([Environment]::NewLine, [StringSplitOptions]::RemoveEmptyEntries))
 
@@ -88,7 +88,8 @@ Function Exec-PwshWebDecoder {
                         #Write-Host "DEBUG decoder $([char](34))$($decoderLineTrim)$([char](34))"
                         
                         # skip comments, otherwise add to queue for scriptblock
-                        If ( ($decoderLineTrim -notlike "<!--*") -and ($decoderLineTrim -notlike ";*") -and ($decoderLineTrim -notlike "#*") -and ($decoderLineTrim -notlike "//*")) {
+                        #If ( ([System.Text.RegularExpressions.Regex]::Matches($decoderBody, "(((<!--.*?).*(-->))|(;.*?|#.*?|\/\/.*?)).*").Count -eq 0) ) {
+                        If ( ($decoderLineTrim -notlike "<!--*") -and ($decoderLineTrim -notlike ";*") -and ($decoderLineTrim -notlike "#*") -and ($decoderLineTrim -notlike "//*") ) {
                             $decoderPwshStatements += $decoderLineTrim + ";"
                         }
                     } else {
@@ -119,6 +120,8 @@ Function Exec-PwshWebDecoder {
 
 
 # -------------------------- MAIN PROGRAM EXECUTION -----------------
+
+Clear-Host
 
 [string]$global:WorkFolder = $PSScriptRoot
 
