@@ -4,7 +4,7 @@
 # Powershell webserver single instance
 #
 # created : 01/11/2020
-# changed : 08/11/2020
+# changed : 09/11/2020
 #
 # Only tested on Windows 10 and Server 2019 with Poweshell 5.1 and Powershell 7.0.3.
 # This script is written with cross platform in mind.
@@ -318,9 +318,11 @@ Function Send-WebByteResponse {
 
     # output stream (html code in a bytes stream), if not empty
     If ( ($Context) -and ($ByteStream) ) {
-        $context.Response.ContentLength64 = $ByteStream.Length
-        $context.Response.OutputStream.Write($ByteStream, 0, $ByteStream.Length) 
-        $context.Response.OutputStream.Close()
+        If ( (Get-WebRequestMethod -Context $context).Equals('GET') ) {
+            $context.Response.ContentLength64 = $ByteStream.Length
+            $context.Response.OutputStream.Write($ByteStream, 0, $ByteStream.Length) 
+            $context.Response.OutputStream.Close()
+        }
     }
 }
 
@@ -340,11 +342,13 @@ Function Send-WebHtmlResponse {
     # output html string stream, if not empty
     # convert to byte stream first.
     If ( ($Context) -and ($HtmlStream) ) {
-        $Context.Response.Headers.Add("Content-Type","text/html")
-        [byte[]]$someBuffer = [System.Text.Encoding]::UTF8.GetBytes($HtmlStream)
-        $context.Response.ContentLength64 = $someBuffer.Length
-        $context.Response.OutputStream.Write($someBuffer, 0, $someBuffer.Length) 
-        $context.Response.OutputStream.Close()
+        If ( (Get-WebRequestMethod -Context $context).Equals('GET') ) {
+            $Context.Response.Headers.Add("Content-Type","text/html")
+            [byte[]]$someBuffer = [System.Text.Encoding]::UTF8.GetBytes($HtmlStream)
+            $context.Response.ContentLength64 = $someBuffer.Length
+            $context.Response.OutputStream.Write($someBuffer, 0, $someBuffer.Length) 
+            $context.Response.OutputStream.Close()
+        }
     }
 }
 
@@ -696,7 +700,8 @@ Function Main {
 
             # Request root and other files
             # http://127.0.0.1/<filename>.<ext>
-            If ((Get-WebRequestMethod -Context $context).Equals('GET') -and ($context.Request.RawUrl -like "/*")) {
+            #If ( (Get-WebRequestMethod -Context $context).Equals('GET') -and ($context.Request.RawUrl -like "/*") ) {
+            If ( ((Get-WebRequestMethod -Context $context).Equals('GET')) -or (Get-WebRequestMethod -Context $context).Equals('POST') -and ($context.Request.RawUrl -like "/*") ) {
                 # if we're at root '/' then replace with '/index.html'. Otherwise, extract pagename.
                 [string]$requestedFilename = ""
                 
@@ -757,7 +762,7 @@ Function Main {
                             "*.ttf" { $context.Response.Headers.Add("Content-Type","font/ttf") }
                             Default { $context.Response.Headers.Add("Content-Type","application/octet-stream") }                            
                         }
-            
+
                         # our HTML inline interpreter
                         If ($bNeedInterpreter) {                                
                             [string]$strippedHTML = Exec-PwshWebDecoder -DataStream $streamBuffer
