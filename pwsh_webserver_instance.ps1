@@ -401,8 +401,8 @@ Function Send-WebResponseCode501 {
 #region Interpreter Function
 #
 # Function : Exec-PwshWebDecoder
-# HTML Inline interpreter or decoder.
-# Executs all lines between <?pwsh and pwsh> tags server side.
+# HTML Inline macro-interpreter or decoder.
+# Executs all lines between <?pwsh and pwsh> tags on server-side.
 #
 Function Exec-PwshWebDecoder {
     Param (
@@ -417,9 +417,10 @@ Function Exec-PwshWebDecoder {
         [string]$decodedHTMLLines = [string]::Empty
 
         # check if we have somewhere in the body the word "pwsh"
-        If ($decoderBody.ToLowerInvariant().Contains("?pwsh")) {
-            # we always need to have equal pwsh statement, otherwise the decoder will hang forever
-            If ($([regex]::Matches($decoderBody, "pwsh" ).Count % 2) -eq 0) {
+        If ($decoderBody.ToLowerInvariant().Contains("<?pwsh")) {
+
+            # We always need to have equal number pwsh tags, otherwise the decoder will hang forever.
+			If ($([System.Text.RegularExpressions.Regex]::Matches($decoderBody, "(<[\?]pwsh|pwsh[>])", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase).Count % 2) -eq 0) {
                 # split lines in string
                 $decoderBodyArray = @($decoderBody.Split([Environment]::NewLine, [StringSplitOptions]::RemoveEmptyEntries))
 
@@ -432,7 +433,9 @@ Function Exec-PwshWebDecoder {
                 ForEach($decoderLine In $decoderBodyArray) {
                     [string]$decoderLineTrim = $decoderLine.Trim()
 
+
                     # execute pwsh block and finish decoding
+                    # the line can only end with "pwsh>", and no other statements may be written on the line
                     If ($decoderLineTrim.ToLowerInvariant().Contains("pwsh>")) {
                         If (-not ([string]::IsNullOrEmpty($decoderPwshStatements))) {
                             Write-Log -LogMsg "---- EXECUTE PWSH ----" -LogFile $global:WebLogFile
