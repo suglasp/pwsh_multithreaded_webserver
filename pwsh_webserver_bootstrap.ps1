@@ -4,7 +4,7 @@
 # Bootstrap script for webserver instances (Powershell) and Loadbalancer (Nginx)
 #
 # created : 01/11/2020
-# changed : 05/11/2020
+# changed : 13/11/2020
 #
 # Only tested on Windows 10 and Server 2019 with Poweshell 5.1 and Powershell 7.0.3.
 # Currently will not run on Linux, unless you change $global:PowershellExe and $global:NginxExe.
@@ -12,15 +12,16 @@
 # Usage:
 # pwsh_webserver_bootstrap.ps1 [-start] [-stop] [-reload] [-verify] [-error] [-access] [-config]
 #
-# -start  : start nginx and powershell webserver instances
-# -stop   : stop nginx and powershell webserver instances
-# -reload : start + stop
-# -verify : check if all is online
-# -error  : dump last 20 lines of nginx error.log
-# -access : dump last 20 lines of nginx access.log
-# -config : dump nginx nginx.conf
-# -clean  : clean log files
-# -reset  : reset full stack
+# -start   : start nginx and powershell webserver instances
+# -stop    : stop nginx and powershell webserver instances
+# -reload  : start + stop (same as -restart)
+# -restart : start + stop (same as -reload)
+# -verify  : check if all is online
+# -error   : dump last 20 lines of nginx error.log
+# -access  : dump last 20 lines of nginx access.log
+# -config  : dump nginx nginx.conf
+# -clean   : clean log files
+# -reset   : reset full stack
 #
 # The purpose is the nginx (loadbalancer) is accessible from outside, and eventually does loadbalancing and SSL termination.
 # The Powershell web instances are hosted on localhost, so only Nginx can "talk" in the backend to the Powershell web instances.
@@ -325,6 +326,17 @@ Function Clean-AllLogs {
     # clean webinstances log files
     Clean-LogPath -logPath $global:WebLogsPath -filter "PowerShell_transcript*.txt"
 }
+
+#
+# Function : Write-BootStrapHelp
+#
+Function Write-BootStrapHelp {
+    Write-Host ""
+	Write-Host "Please provide a correct command, I did not understand what you want."
+    Write-Host "Usage : .\$(Split-Path -Path $MyInvocation.PSCommandPath -Leaf) [-start], [-stop], [-reload], [-restart], [-verify], [-access], [-error], [-clean], [-reset]"
+	Write-Host ""
+	Exit(0)
+}
 #endregion
 
 
@@ -344,20 +356,25 @@ Function Main {
             # A pwsh Switch statement is by default always case insensitive for Strings
             Switch ($Arguments[$i]) {
                 "-start" {
-                    Write-Host ">> Starting loadbalancer"                
+                    Write-Host ">> Starting loadbalancer stack"                
                     Start-Loadbalancer         
                 }
 
                 "-stop" {
-                    Write-Host ">> Stopping loadbalancer"
+                    Write-Host ">> Stopping loadbalancer stack"
                     Stop-Loadbalancer
                 }
 
                 "-reload" {                
-                    Write-Host ">> Reloading loadbalancer"
+                    Write-Host ">> Reloading loadbalancer stack"
                     Reload-Loadbalancer
                 }
-
+				
+                "-restart" {                
+                    Write-Host ">> Restarting loadbalancer stack"
+                    Reload-Loadbalancer
+                }
+				
                 "-verify" {                
                     Write-Host ">> Verify loadbalancer"
                     Verify-Loadbalancer
@@ -379,12 +396,12 @@ Function Main {
                 }
 
                 "-clean" {
-                    Write-Host ">> Clean log files" 
+                    Write-Host ">> Clean stack log files" 
                     Clean-AllLogs
                 }
 
                 "-reset" {
-                    Write-Host ">> Reset webserver" 
+                    Write-Host ">> Resetting stack (clean log files and PID files)" 
                     Stop-Loadbalancer
                     Start-Sleep -Seconds 2
                     Clean-LoadbalancerPID
@@ -392,10 +409,13 @@ Function Main {
                     Write-Host "-- done"
                 }
 
+                default {
+					Write-BootStrapHelp
+				}
             }
         }
     } else {
-        Write-Host "Usage : -start, -stop, -reload, -verify, -access, -error, -clean or -reset"
+        Write-BootStrapHelp
     }
 
     Exit(0)
