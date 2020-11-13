@@ -7,7 +7,7 @@ I needed a webserver to host a tools/utility webpage as a sysadmin.
 The utility page needed to be flexible and be able to interact with low level components.
 Go lang or Rust would fit to, but takes more time to write and also in Powershell,
 many of these low level components are present.
-In few days, I put this together and make it so, so that more then one user can interact with
+In a few days, I put this together and make it so, so that more then one user can interact with
 the webserver at the same time.
 
 The part _'multithreaded'_ in the github name, is in fact untrue.
@@ -60,6 +60,9 @@ Stopping running webserver instances in Powershell (*):
 
 Restarting webserver instances in Powershell (*):
 > .\pwsh_webserver_bootstrap.ps1 -reload
+
+Same as '-reload', just to make it easy:
+> .\pwsh_webserver_bootstrap.ps1 -restart
 
 Verify webserver instances in Powershell:
 > .\pwsh_webserver_bootstrap.ps1 -verify
