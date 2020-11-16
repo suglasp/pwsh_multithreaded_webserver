@@ -4,7 +4,7 @@
 # Webserver very basic plugin to emulate logon form
 #
 # Created : 05/11/2020
-# Updated : 09/11/2020
+# Updated : 16/11/2020
 #
 # Notice: This module has RequiredModules set in Web.Logon.psd1.
 # This module has a requirement for Web.Redirect and Web.Cookies.
@@ -20,7 +20,11 @@ Function Validate-Logon {
         [Parameter( Mandatory = $True )]
         [System.Net.HttpListenerContext]$Context,
         [Parameter( Mandatory = $True )]
-        [String]$LogonCookieName
+        [String]$LogonCookieName,
+        [Parameter( Mandatory = $True )]
+        [String]$SuccessURL,
+        [Parameter( Mandatory = $True )]
+        [String]$FailureURL
     )
 
     If (($global:http) -and ($Context)) {
@@ -30,7 +34,7 @@ Function Validate-Logon {
        # check if cookie is set or not
        If ($logonCookie) {
             #Set-WebCookie -Context $Context -CookieID $logonCookie.Name -CookieValue $logonCookie.Value
-            Start-WebRedirect -Context $context -RelativeUrl "/logon/success.html"
+            Start-WebRedirect -Context $context -RelativeUrl $SuccessURL   # "/logon/success.html"
        } Else {
             # decode the form post
             $FormContent = [System.IO.StreamReader]::new($Context.Request.InputStream).ReadToEnd()
@@ -51,15 +55,15 @@ Function Validate-Logon {
                 # provided password must check local username that logged on to OS
                 If ($passwordForm.ToLowerInvariant().Equals([environment]::GetEnvironmentVariable("USERNAME").ToLowerInvariant())) {
                     Set-WebCookie -Context $Context -CookieID $LogonCookieName -CookieValue "$($usernameForm)"
-                    Start-WebRedirect -Context $Context -RelativeUrl "/logon/success.html" -CloseResponse
+                    Start-WebRedirect -Context $Context -RelativeUrl $SuccessURL -CloseResponse   # "/logon/success.html"
                 } Else {
-                    Start-WebRedirect -Context $Context -RelativeUrl "/logon/failed.html" -CloseResponse
+                    Start-WebRedirect -Context $Context -RelativeUrl $FailureURL -CloseResponse   # "/logon/failed.html"
                     
                     #[string]$html = "<html><head><title>failed</title><h1>A Powershell Webserver</h1><p>Logon failed</p></body></html>"
                     #Send-WebHtmlResponse -Context $Context -HtmlStream $html
                 }
             } Else {
-                Start-WebRedirect -Context $Context -RelativeUrl "/logon/failed.html" -CloseResponse
+                Start-WebRedirect -Context $Context -RelativeUrl $FailureURL -CloseResponse  # "/logon/failed.html"
                 
                 #[string]$html = "<html><head><title>failed</title><h1>A Powershell Webserver</h1><p>Logon failed</p></body></html>"
                 #Send-WebHtmlResponse -Context $Context -HtmlStream $html
@@ -81,7 +85,9 @@ Function Approve-LogonCheck {
         [Parameter( Mandatory = $True )]
         [System.Net.HttpListenerContext]$Context,
         [Parameter( Mandatory = $True )]
-        [String]$LogonCookieName
+        [String]$LogonCookieName,
+        [Parameter( Mandatory = $True )]
+        [String]$SuccessURL
     )
 
     If (($global:http) -and ($Context)) {
@@ -89,7 +95,7 @@ Function Approve-LogonCheck {
 
        If ($logonCookie) {
             Write-Log -LogMsg " -> LogonCheck cookie $($LogonCookieName) is set" -LogFile $global:WebLogFile
-            Start-WebRedirect -Context $Context -RelativeUrl "/logon/success.html"
+            Start-WebRedirect -Context $Context -RelativeUrl $SuccessURL   # "/logon/success.html"
        } Else {
             Write-Log -LogMsg " -> LogonCheck cookie $($LogonCookieName) is not set" -LogFile $global:WebLogFile
        }
@@ -108,7 +114,9 @@ Function Approve-SuccessCheck {
         [Parameter( Mandatory = $True )]
         [System.Net.HttpListenerContext]$Context,
         [Parameter( Mandatory = $True )]
-        [String]$LogonCookieName
+        [String]$LogonCookieName,
+        [Parameter( Mandatory = $True )]
+        [String]$LandingURL
     )
 
     If (($global:http) -and ($Context)) {
@@ -116,7 +124,7 @@ Function Approve-SuccessCheck {
 
        If (-not ($logonCookie)) {
             Write-Log -LogMsg " -> SuccessCheck cookie $($LogonCookieName) is not set" -LogFile $global:WebLogFile
-            Start-WebRedirect -Context $Context -RelativeUrl "/logon/logon.html"
+            Start-WebRedirect -Context $Context -RelativeUrl $LandingURL   # "/logon/logon.html"
        } Else {
             Write-Log -LogMsg " -> SuccessCheck cookie $($LogonCookieName) is set" -LogFile $global:WebLogFile
        }
@@ -136,7 +144,9 @@ Function Remove-Logon {
         [Parameter( Mandatory = $True )]
         [System.Net.HttpListenerContext]$Context,
         [Parameter( Mandatory = $True )]
-        [String]$LogonCookieName
+        [String]$LogonCookieName,
+        [Parameter( Mandatory = $True )]
+        [String]$LandingURL
     )
 
     If (($global:http) -and ($Context)) {
@@ -144,7 +154,7 @@ Function Remove-Logon {
 
        If ($logonCookie) {
            Clear-WebCookie -Context $Context -CookieID $LogonCookieName
-           Start-WebRedirect -Context $Context -RelativeUrl "/logon"
+           Start-WebRedirect -Context $Context -RelativeUrl $LandingURL   # "/logon"
        }
     } Else {
         # woops, 501
