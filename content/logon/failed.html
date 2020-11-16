@@ -1,6 +1,6 @@
 <?pwsh
     ; check if we are logged on (cookie present?)
-    Approve-LogonCheck -Context $context -LogonCookieName "mylogonid"
+    Approve-LogonCheck -Context $context -LogonCookieName "mylogonid" -SuccessURL "/logon/success.html"
 pwsh>
 
 

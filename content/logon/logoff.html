@@ -1,4 +1,4 @@
 <?pwsh
     ; logoff user session (remove cookie)
-    Remove-Logon -Context $context -LogonCookieName "mylogonid"
+    Remove-Logon -Context $context -LogonCookieName "mylogonid" -LandingURL "/logon"
 pwsh>

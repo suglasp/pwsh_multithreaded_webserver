@@ -1,16 +1,10 @@
 <?pwsh
-    ; check if we are logged on (cookie present?)
-    ; Approve-LogonCheck -Context $context -LogonCookieName "mylogonid"
-
     If ((Get-WebRequestMethod -Context $context).Equals('GET')) {
-        Write-Host "GET"
         ; check if we are logged on (cookie present?)
-        Approve-LogonCheck -Context $context -LogonCookieName "mylogonid"
+        Approve-LogonCheck -Context $context -LogonCookieName "mylogonid" -SuccessURL "/logon/success.html"
     } Else {        
-        Write-Host "POST"
         ; validate the logon when the request is a http POST
-        Validate-Logon -Context $context -LogonCookieName "mylogonid"
-        #Continue
+        Validate-Logon -Context $context -LogonCookieName "mylogonid" -SuccessURL "/logon/success.html" -FailureURL "/logon/failed.html"
     }
 pwsh>
 
