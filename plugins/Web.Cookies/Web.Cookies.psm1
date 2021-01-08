@@ -4,7 +4,7 @@
 # Webserver Cookies Plugin
 #
 # Created : 04/11/2020
-# Updated : 09/11/2020
+# Updated : 08/01/2021
 #
 
 $CommandsToExport = @()
@@ -75,9 +75,9 @@ Function Set-WebCookie {
 		$setCookie.Secure = $true
         $setCookie.Expired = $false
         $setCookie.Path = $CookiePath
-		#$Context.Response.SetCookie($setCookie)
-		$context.Response.AddHeader("Set-Cookie", "$($setCookie.Name)=$($setCookie.Value)");
-		#$context.Response.AppendHeader("Set-Cookie", "name2=value2");
+		$Context.Response.SetCookie($setCookie)
+		#$context.Response.AddHeader("Set-Cookie", "$($setCookie.Name)=$($setCookie.Value)")
+		#$context.Response.AppendHeader("Set-Cookie", "name2=value2")
     } Else {
         # woops, 501
         Send-WebResponseCode501
