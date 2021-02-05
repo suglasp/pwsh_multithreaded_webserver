@@ -1,10 +1,11 @@
 
 #
 # Pieter De Ridder
+# https://www.github.com/suglasp
 # Powershell webserver single instance
 #
 # created : 01/11/2020
-# changed : 09/11/2020
+# changed : 05/02/2021
 #
 # Only tested on Windows 10 and Server 2019 with Poweshell 5.1 and Powershell 7.0.3.
 # This script is written with cross platform in mind.
@@ -236,7 +237,7 @@ Function Start-LocalLogging
     If ($global:DebugTransscriptLogging) {
         # create logs path if not exists
         If (-Not (Test-Path -Path $global:WebLogsPath)) {
-            New-Item -Name $global:WebLogsPath -ItemType Directory
+            New-Item -Name "$(Split-Path -Path "$($Global:WebLogsPath)" -Leaf)" -Path "$(Split-Path -Path "$($Global:WebLogsPath)" -Parent)" -ItemType Directory | Out-Null
         }
 
         # try enable logging output
